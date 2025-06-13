@@ -2,7 +2,7 @@
 "use client";
 
 import type { Product } from '@/types';
-import { db } from '@/lib/firebase'; // Import Firestore instance
+import { db, storage } from '@/lib/firebase'; // Import Firestore instance AND storage
 import { 
   collection, 
   onSnapshot, 
@@ -10,44 +10,58 @@ import {
   doc, 
   updateDoc,
   query,
-  where,
-  getDocs,
-  writeBatch,
-  serverTimestamp // Optional: for timestamps
+  // where, // No longer used for simple product list
+  // getDocs, // No longer used for seeding logic here
+  // writeBatch, // No longer used for seeding logic here
+  // serverTimestamp // Optional: for timestamps
 } from 'firebase/firestore';
+import { 
+  ref as storageFirebaseRef, // Alias ref from storage to avoid conflict with React.ref
+  uploadBytesResumable, 
+  getDownloadURL 
+} from 'firebase/storage';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
-import { useAuth } from './AuthContext'; // To associate products with users (optional future step)
+// import { useAuth } from './AuthContext'; // Not directly used in current product logic
 import { useToast } from '@/hooks/use-toast';
-import { mockProducts } from '@/data/mock-products'; // Keep for potential one-time seeding
+// import { mockProducts } from '@/data/mock-products'; // Keep for potential one-time seeding
 
 
 interface ProductContextType {
   products: Product[];
-  addProduct: (product: Omit<Product, 'id' | 'userId'>) => Promise<void>; // Modified to be async
-  updateProductQuantity: (productId: string, newQuantity: number) => Promise<void>; // Modified to be async
+  addProduct: (product: Omit<Product, 'id' | 'userId'>) => Promise<void>; 
+  updateProductQuantity: (productId: string, newQuantity: number) => Promise<void>; 
   getProductById: (productId: string) => Product | undefined;
   loadingProducts: boolean;
-  seedInitialData?: () => Promise<void>; // Optional: for seeding mock data
+  // seedInitialData?: () => Promise<void>; // Optional: for seeding mock data
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 const PRODUCTS_COLLECTION = 'products';
 
+// Helper function to convert data URI to Blob
+function dataURItoBlob(dataURI: string): Blob {
+  if (!dataURI.includes(',')) {
+    throw new Error('Invalid data URI');
+  }
+  const byteString = atob(dataURI.split(',')[1]);
+  const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([ab], { type: mimeString });
+}
+
 export const ProductProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const { user } = useAuth(); // Get current user
+  // const { user } = useAuth(); 
   const { toast } = useToast();
 
-  // Fetch products from Firestore
   useEffect(() => {
     setLoadingProducts(true);
-    // For now, we load all products. 
-    // Later, you might want to filter by userId if products are user-specific.
-    // const q = query(collection(db, PRODUCTS_COLLECTION), where("userId", "==", user.uid));
-    // For a public catalog, you might not filter by user ID.
-    // Let's start by loading all products in the 'products' collection.
     const q = query(collection(db, PRODUCTS_COLLECTION));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -67,21 +81,42 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       setLoadingProducts(false);
     });
 
-    return () => unsubscribe(); // Cleanup subscription on unmount
-  }, [toast]); // Removed user from dependency array for now to load all products
+    return () => unsubscribe();
+  }, [toast]);
 
   const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'userId'>) => {
-    // if (!user) {
-    //   toast({ title: "No autenticado", description: "Debes iniciar sesión para agregar productos.", variant: "destructive" });
-    //   return;
-    // }
+    let imageUrlToSave = productData.imageUrl;
+
+    if (productData.imageUrl && productData.imageUrl.startsWith('data:image')) {
+      toast({ title: "Procesando imagen generada...", description: "Esto puede tomar unos momentos." });
+      try {
+        const blob = dataURItoBlob(productData.imageUrl);
+        const imageName = `product_${Date.now()}_${productData.name.replace(/\s+/g, '_').toLowerCase()}.png`;
+        const storageRefPath = `product-images/${imageName}`;
+        const imageRef = storageFirebaseRef(storage, storageRefPath);
+
+        // Show toast for upload starting - No need, covered by isSubmitting
+        const uploadTask = uploadBytesResumable(imageRef, blob);
+
+        // Wait for upload to complete
+        await uploadTask; 
+        
+        imageUrlToSave = await getDownloadURL(imageRef);
+        toast({ title: "Imagen Subida", description: "La imagen generada por IA se ha guardado correctamente.", variant: "default" });
+      } catch (error) {
+        console.error("Error uploading image to Firebase Storage: ", error);
+        toast({ title: "Error al subir imagen de IA", description: "No se pudo guardar la imagen. Se usará una imagen de marcador.", variant: "destructive" });
+        imageUrlToSave = 'https://placehold.co/300x200.png'; // Fallback
+      }
+    }
+
     try {
-      const docRef = await addDoc(collection(db, PRODUCTS_COLLECTION), {
+      await addDoc(collection(db, PRODUCTS_COLLECTION), {
         ...productData,
-        // userId: user.uid, // Optional: associate product with user
+        imageUrl: imageUrlToSave,
+        // userId: user?.uid, // Optional: associate product with user
         // createdAt: serverTimestamp() // Optional: add a server timestamp
       });
-      // No need to setProducts here, onSnapshot will handle it
       toast({ title: "Producto Agregado", description: `"${productData.name}" se agregó exitosamente.`});
     } catch (error) {
       console.error("Error adding product to Firestore: ", error);
@@ -90,8 +125,9 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         description: "No se pudo guardar el producto en la base de datos.",
         variant: "destructive",
       });
+      throw error; // Re-throw error so form can catch it if needed
     }
-  }, [toast]); // Removed user from dependency array
+  }, [toast]);
 
   const updateProductQuantity = useCallback(async (productId: string, newQuantity: number) => {
     const productRef = doc(db, PRODUCTS_COLLECTION, productId);
@@ -99,8 +135,6 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       await updateDoc(productRef, {
         quantity: Math.max(0, newQuantity)
       });
-      // No need to setProducts here, onSnapshot will handle it
-      // toast({ title: "Inventario Actualizado", description: `Cantidad actualizada.`}); // Toast can be redundant if UI updates quickly
     } catch (error) {
       console.error("Error updating product quantity in Firestore: ", error);
       toast({
@@ -115,43 +149,8 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     return products.find(p => p.id === productId);
   }, [products]);
 
-  // Optional: Function to seed mockProducts to Firestore if the collection is empty
-  // This is a basic example; you might want more robust checks in a real app.
-  const seedInitialData = useCallback(async () => {
-    if (!user) {
-        toast({ title: "No autenticado", description: "Debes iniciar sesión para cargar datos iniciales.", variant: "destructive"});
-        return;
-    }
-    setLoadingProducts(true);
-    try {
-        const q = query(collection(db, PRODUCTS_COLLECTION));
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) {
-            const batch = writeBatch(db);
-            mockProducts.forEach(product => {
-                const { id, ...productData } = product; // Firestore will generate ID
-                const docRef = doc(collection(db, PRODUCTS_COLLECTION)); // Create new doc ref
-                batch.set(docRef, {
-                    ...productData,
-                    // userId: user.uid // Assign to current user
-                });
-            });
-            await batch.commit();
-            toast({ title: "Datos Iniciales Cargados", description: "Los productos de ejemplo se han cargado."});
-        } else {
-            toast({ title: "Base de Datos no Vacía", description: "Los datos iniciales ya existen o la colección no está vacía."});
-        }
-    } catch (error) {
-        console.error("Error seeding initial data: ", error);
-        toast({ title: "Error al Cargar Datos Iniciales", description: String(error), variant: "destructive"});
-    } finally {
-        setLoadingProducts(false);
-    }
-  }, [toast, user]);
-
-
   return (
-    <ProductContext.Provider value={{ products, addProduct, updateProductQuantity, getProductById, loadingProducts /*, seedInitialData */ }}>
+    <ProductContext.Provider value={{ products, addProduct, updateProductQuantity, getProductById, loadingProducts }}>
       {children}
     </ProductContext.Provider>
   );
@@ -164,4 +163,3 @@ export const useProducts = (): ProductContextType => {
   }
   return context;
 };
-
