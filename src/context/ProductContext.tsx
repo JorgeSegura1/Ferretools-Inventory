@@ -42,17 +42,17 @@ const PRODUCTS_COLLECTION = 'products';
 // Helper function to convert data URI to Blob
 function dataURItoBlob(dataURI: string): Blob {
   if (!dataURI.includes(',')) {
-    console.error("Invalid data URI string for blob conversion:", dataURI.substring(0,100) + "...");
+    console.error("Invalid data URI string for blob conversion (missing comma):", dataURI.substring(0,100) + "...");
     throw new Error('Invalid data URI for blob conversion');
   }
   const [metadata, base64Data] = dataURI.split(',');
   if (!metadata || !base64Data) {
-    console.error("Malformed data URI string for blob conversion:", dataURI.substring(0,100) + "...");
+    console.error("Malformed data URI string for blob conversion (split error):", dataURI.substring(0,100) + "...");
     throw new Error('Malformed data URI for blob conversion');
   }
   const mimeString = metadata.split(':')[1]?.split(';')[0];
   if (!mimeString) {
-    console.error("Could not extract mimeType from data URI:", metadata);
+    console.error("Could not extract mimeType from data URI metadata:", metadata);
     throw new Error('Could not extract mimeType from data URI');
   }
   
@@ -97,38 +97,29 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
 
   const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'userId'>) => {
     let imageUrlToSave = productData.imageUrl;
-    console.log("[ProductContext] addProduct called. Initial imageUrl:", productData.imageUrl ? productData.imageUrl.substring(0, 30) + "..." : "empty");
 
     if (productData.imageUrl && productData.imageUrl.startsWith('data:image')) {
       toast({ title: "Procesando imagen generada...", description: "Subiendo a Firebase Storage. Esto puede tomar unos momentos." });
-      console.log("[ProductContext] Attempting to upload Base64 image to Firebase Storage...");
       try {
         const blob = dataURItoBlob(productData.imageUrl);
         const imageName = `product_${Date.now()}_${productData.name.replace(/\s+/g, '_').toLowerCase()}.png`;
         const storageRefPath = `product-images/${imageName}`;
         const imageRef = storageFirebaseRef(storage, storageRefPath);
-        console.log("[ProductContext] Storage ref created:", storageRefPath);
-
+        
         const uploadTask = uploadBytesResumable(imageRef, blob);
-        console.log("[ProductContext] Upload task started. Waiting for upload to complete...");
         
         await uploadTask; 
-        console.log("[ProductContext] Image upload to Firebase Storage completed.");
         
         imageUrlToSave = await getDownloadURL(imageRef);
-        console.log("[ProductContext] Download URL obtained:", imageUrlToSave);
         toast({ title: "Imagen Subida", description: "La imagen generada por IA se ha guardado correctamente en Storage.", variant: "default" });
       } catch (error) {
         const err = error as Error;
-        console.error("[ProductContext] Error uploading image to Firebase Storage: ", err);
+        console.error("Error uploading image to Firebase Storage: ", err);
         toast({ title: "Error al subir imagen de IA", description: `No se pudo guardar la imagen. Se usará un marcador. Detalle: ${err.message}`, variant: "destructive" });
         imageUrlToSave = 'https://placehold.co/300x200.png'; // Fallback
       }
-    } else {
-      console.log("[ProductContext] Using provided imageUrl or placeholder, not uploading to Storage:", imageUrlToSave);
     }
 
-    console.log("[ProductContext] Attempting to add document to Firestore with imageUrl:", imageUrlToSave ? imageUrlToSave.substring(0, 50) + "..." : "empty");
     try {
       await addDoc(collection(db, PRODUCTS_COLLECTION), {
         ...productData,
@@ -136,11 +127,10 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         // userId: user?.uid, // Optional: associate product with user
         // createdAt: serverTimestamp() // Optional: add a server timestamp
       });
-      console.log("[ProductContext] Document added to Firestore successfully.");
       toast({ title: "Producto Agregado", description: `"${productData.name}" se agregó exitosamente.`});
     } catch (error) {
       const err = error as Error;
-      console.error("[ProductContext] Error adding product to Firestore: ", err);
+      console.error("Error adding product to Firestore: ", err);
       toast({
         title: "Error al agregar producto",
         description: `No se pudo guardar el producto en la base de datos. Detalle: ${err.message}`,
@@ -158,7 +148,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error) {
       const err = error as Error;
-      console.error("[ProductContext] Error updating product quantity in Firestore: ", err);
+      console.error("Error updating product quantity in Firestore: ", err);
       toast({
         title: "Error al actualizar cantidad",
         description: `No se pudo actualizar el producto. Detalle: ${err.message}`,
