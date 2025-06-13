@@ -41,6 +41,7 @@ export default function AddItemForm() {
   });
 
   const onSubmit: SubmitHandler<FormData> = (data) => {
+    console.log('Form data received:', data);
     const newProductData = {
         ...data,
         imageUrl: data.imageUrl || `https://placehold.co/300x200.png?text=${encodeURIComponent(data.name)}`

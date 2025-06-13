@@ -21,6 +21,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       ...productData,
       id: Date.now().toString(), // Simple ID generation
     };
+    console.log("Adding new product:", newProduct); // Added console log
     setProducts((prevProducts) => [...prevProducts, newProduct]);
   }, []);
 

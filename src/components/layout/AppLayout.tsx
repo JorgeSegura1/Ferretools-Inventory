@@ -54,7 +54,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen>
-      <SiteHeader />
+ <SiteHeader />
       <Sidebar PdefaultOpen={true} collapsible="icon" className="border-r">
         <SidebarHeader className="p-4">
           <Link href="/" className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
       </Sidebar>
-      <SidebarInset>
+ <SidebarInset className="md:ml-64">
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           {children}
         </main>

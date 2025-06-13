@@ -1,5 +1,4 @@
 "use client";
-
 import InventoryTable from '@/components/inventory/InventoryTable';
 import { useProducts } from '@/context/ProductContext';
 import { Button } from '@/components/ui/button';
