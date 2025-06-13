@@ -6,12 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { generateProductImage } from '@/ai/flows/generate-product-image-flow';
+import type { Product } from '@/types';
+
 
 const formSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres."),
@@ -20,6 +26,7 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(0, "La cantidad no puede ser negativa."),
   imageUrl: z.string().url("Debe ser una URL válida para la imagen.").or(z.literal('')),
   category: z.string().optional(),
+  generateImage: z.boolean().default(true),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -28,8 +35,9 @@ export default function AddItemForm() {
   const { addProduct } = useProducts();
   const { toast } = useToast();
   const router = useRouter();
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
@@ -38,23 +46,76 @@ export default function AddItemForm() {
       quantity: 0,
       imageUrl: '',
       category: '',
+      generateImage: true,
     }
   });
 
-  const onSubmit: SubmitHandler<FormData> = (data) => {
-    console.log('Form data received:', data);
-    const newProductData = {
-        ...data,
-        imageUrl: data.imageUrl || 'https://placehold.co/300x200.png'
+  const watchImageUrl = watch("imageUrl");
+  const watchGenerateImage = watch("generateImage");
+
+  const onSubmit: SubmitHandler<FormData> = async (data) => {
+    setIsGeneratingImage(false); // Reset
+    let finalImageUrl = data.imageUrl;
+
+    if (data.generateImage && !data.imageUrl) {
+      setIsGeneratingImage(true);
+      try {
+        toast({
+          title: "Generando Imagen con IA...",
+          description: "Esto puede tomar unos segundos.",
+        });
+        const generatedImageOutput = await generateProductImage({
+          productName: data.name,
+          productDescription: data.description,
+        });
+        if (generatedImageOutput && generatedImageOutput.imageDataUri) {
+          finalImageUrl = generatedImageOutput.imageDataUri;
+          toast({
+            title: "Imagen Generada",
+            description: "La IA ha generado una imagen para tu producto.",
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Error de IA",
+            description: "No se pudo generar la imagen. Se usará una imagen de marcador.",
+            variant: "destructive",
+          });
+          finalImageUrl = 'https://placehold.co/300x200.png';
+        }
+      } catch (error) {
+        console.error("Error generating image:", error);
+        toast({
+          title: "Error de IA",
+          description: "Ocurrió un error al generar la imagen. Se usará una imagen de marcador.",
+          variant: "destructive",
+        });
+        finalImageUrl = 'https://placehold.co/300x200.png';
+      } finally {
+        setIsGeneratingImage(false);
+      }
+    } else if (!data.imageUrl) {
+      finalImageUrl = 'https://placehold.co/300x200.png';
+    }
+    
+    const { generateImage, ...productDetails } = data; // Exclude generateImage from product data
+
+    const newProductData: Omit<Product, 'id'> = {
+        ...productDetails,
+        imageUrl: finalImageUrl,
     };
+
     addProduct(newProductData);
     toast({
       title: "Artículo Agregado",
       description: `"${data.name}" ha sido agregado al inventario.`,
+      variant: "default",
     });
     reset();
     router.push('/inventory');
   };
+  
+  const isLoading = isSubmitting || isGeneratingImage;
 
   return (
     <Card className="max-w-2xl mx-auto shadow-lg">
@@ -91,9 +152,30 @@ export default function AddItemForm() {
           
           <div>
             <Label htmlFor="imageUrl">URL de la Imagen (opcional)</Label>
-            <Input id="imageUrl" type="url" {...register('imageUrl')} placeholder="https://ejemplo.com/imagen.png" />
-            {errors.imageUrl && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
+            <Input 
+              id="imageUrl" 
+              type="url" 
+              {...register('imageUrl')} 
+              placeholder="https://ejemplo.com/imagen.png o dejar vacío para IA" 
+              disabled={watchGenerateImage}
+            />
+             {errors.imageUrl && !watchGenerateImage && <p className="text-sm text-destructive mt-1">{errors.imageUrl.message}</p>}
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="generateImage" 
+              {...register('generateImage')}
+              checked={watchGenerateImage}
+              onCheckedChange={(checked) => reset({ ...watch(), generateImage: !!checked, imageUrl: checked ? '' : watchImageUrl })}
+              disabled={!!watchImageUrl}
+            />
+            <Label htmlFor="generateImage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Generar imagen con IA si la URL está vacía
+            </Label>
+          </div>
+          { watchImageUrl && <p className="text-xs text-muted-foreground mt-1">Desmarca "Generar imagen con IA" para habilitar la URL de imagen si ya has ingresado una.</p>}
+
 
           <div>
             <Label htmlFor="category">Categoría (opcional)</Label>
@@ -102,10 +184,12 @@ export default function AddItemForm() {
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
               Cancelar
             </Button>
-            <Button type="submit">Agregar Artículo</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Agregar Artículo"}
+            </Button>
           </div>
         </form>
       </CardContent>
