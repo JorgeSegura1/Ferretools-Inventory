@@ -22,7 +22,8 @@ interface InventoryTableProps {
 
 function getProductHint(category?: string): string {
   if (category) {
-    const words = category.split(' ');
+    const words = category.split(' ').filter(Boolean); // filter out empty strings from multiple spaces
+    if (words.length === 0) return 'hardware tool';
     if (words.length === 1) return words[0];
     return words.slice(0, 2).join(' ');
   }
@@ -66,7 +67,7 @@ export default function InventoryTable({ products }: InventoryTableProps) {
                     />
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>${product.price.toFixed(2)}</TableCell>
+                  <TableCell>{product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant={product.quantity === 0 ? 'destructive' : 'outline'}>
                       {product.quantity}
