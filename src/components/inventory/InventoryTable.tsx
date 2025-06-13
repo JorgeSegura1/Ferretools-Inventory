@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import EditQuantityDialog from './EditQuantityDialog';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useProducts } from '@/context/ProductContext'; // Import useProducts
+import { Loader2 } from 'lucide-react'; // Import Loader2
 
 interface InventoryTableProps {
   products: Product[];
@@ -31,8 +33,18 @@ function getProductHint(category?: string): string {
 }
 
 export default function InventoryTable({ products }: InventoryTableProps) {
-  if (products.length === 0) {
-    return <p className="text-center text-muted-foreground">El inventario está vacío.</p>;
+  const { loadingProducts } = useProducts(); // Get loading state
+
+  if (loadingProducts && products.length === 0) { // Show loader if loading and no products are available yet
+    return (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+    );
+  }
+  
+  if (!loadingProducts && products.length === 0) {
+    return <p className="text-center text-muted-foreground py-10">El inventario está vacío. ¡Agrega tu primer artículo!</p>;
   }
 
   const inventoryContent = (
@@ -87,3 +99,4 @@ export default function InventoryTable({ products }: InventoryTableProps) {
 
   return inventoryContent;
 }
+

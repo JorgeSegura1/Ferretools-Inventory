@@ -1,7 +1,7 @@
 
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
-// import { getFirestore } from "firebase/firestore"; // Add if you need Firestore later
+import { getFirestore } from "firebase/firestore"; // Add if you need Firestore later
 // import { getStorage } from "firebase/storage"; // Add if you need Storage later
 // import { getAnalytics } from "firebase/analytics"; // Add if you need Analytics later
 
@@ -41,10 +41,11 @@ const firebaseConfig: FirebaseOptions = {
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
-// const db = getFirestore(app); // Uncomment if you use Firestore
+const db = getFirestore(app); // Uncomment if you use Firestore
 // const storage = getStorage(app); // Uncomment if you use Storage
 
 // Initialize Analytics only if measurementId is available and in a browser environment
 // const analytics = typeof window !== 'undefined' && firebaseConfig.measurementId ? getAnalytics(app) : undefined;
 
-export { app, auth /*, db, storage, analytics */ };
+export { app, auth, db /*, storage, analytics */ };
+
