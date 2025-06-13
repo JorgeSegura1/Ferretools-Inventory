@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useProducts } from '@/context/ProductContext';
@@ -10,7 +11,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation'; // Corrected import
+import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres."),
@@ -44,7 +45,7 @@ export default function AddItemForm() {
     console.log('Form data received:', data);
     const newProductData = {
         ...data,
-        imageUrl: data.imageUrl || `https://placehold.co/300x200.png?text=${encodeURIComponent(data.name)}`
+        imageUrl: data.imageUrl || 'https://placehold.co/300x200.png'
     };
     addProduct(newProductData);
     toast({

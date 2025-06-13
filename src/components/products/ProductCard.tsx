@@ -1,3 +1,4 @@
+
 import type { Product } from '@/types';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +7,15 @@ import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
+}
+
+function getProductHint(category?: string): string {
+  if (category) {
+    const words = category.split(' ');
+    if (words.length === 1) return words[0];
+    return words.slice(0, 2).join(' ');
+  }
+  return 'hardware tool'; // Default hint
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
@@ -20,7 +30,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             alt={product.name}
             layout="fill"
             objectFit="cover"
-            data-ai-hint={`${product.category || "hardware"} item`}
+            data-ai-hint={getProductHint(product.category)}
           />
           {isOutOfStock && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">

@@ -20,6 +20,15 @@ interface InventoryTableProps {
   products: Product[];
 }
 
+function getProductHint(category?: string): string {
+  if (category) {
+    const words = category.split(' ');
+    if (words.length === 1) return words[0];
+    return words.slice(0, 2).join(' ');
+  }
+  return 'hardware tool'; // Default hint
+}
+
 export default function InventoryTable({ products }: InventoryTableProps) {
   if (products.length === 0) {
     return <p className="text-center text-muted-foreground">El inventario está vacío.</p>;
@@ -53,7 +62,7 @@ export default function InventoryTable({ products }: InventoryTableProps) {
                       width={50}
                       height={50}
                       className="rounded-md object-cover"
-                      data-ai-hint={`${product.category || "hardware"} item`}
+                      data-ai-hint={getProductHint(product.category)}
                     />
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
