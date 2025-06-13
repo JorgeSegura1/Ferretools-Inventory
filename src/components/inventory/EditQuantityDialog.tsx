@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Product } from '@/types';
@@ -17,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useState } from 'react';
+import React, { useState } from 'react'; // Changed this line
 import { useToast } from '@/hooks/use-toast';
 import { Edit3 } from 'lucide-react';
 
