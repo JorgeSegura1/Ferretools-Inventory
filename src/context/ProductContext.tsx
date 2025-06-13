@@ -18,7 +18,8 @@ import {
 import { 
   ref as storageFirebaseRef, // Alias ref from storage to avoid conflict with React.ref
   uploadBytesResumable, 
-  getDownloadURL 
+  getDownloadURL,
+  type FirebaseStorageError 
 } from 'firebase/storage';
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 // import { useAuth } from './AuthContext'; // Not directly used in current product logic
@@ -41,28 +42,37 @@ const PRODUCTS_COLLECTION = 'products';
 
 // Helper function to convert data URI to Blob
 function dataURItoBlob(dataURI: string): Blob {
+  // console.log("Attempting to convert data URI (first 100 chars):", dataURI.substring(0,100) + "...");
   if (!dataURI.includes(',')) {
     console.error("Invalid data URI string for blob conversion (missing comma):", dataURI.substring(0,100) + "...");
-    throw new Error('Invalid data URI for blob conversion');
+    throw new Error('Invalid data URI for blob conversion: missing comma separator.');
   }
   const [metadata, base64Data] = dataURI.split(',');
   if (!metadata || !base64Data) {
     console.error("Malformed data URI string for blob conversion (split error):", dataURI.substring(0,100) + "...");
-    throw new Error('Malformed data URI for blob conversion');
+    throw new Error('Malformed data URI for blob conversion: could not split metadata and base64 data.');
   }
   const mimeString = metadata.split(':')[1]?.split(';')[0];
   if (!mimeString) {
     console.error("Could not extract mimeType from data URI metadata:", metadata);
-    throw new Error('Could not extract mimeType from data URI');
+    throw new Error('Could not extract mimeType from data URI metadata.');
   }
   
-  const byteString = atob(base64Data);
-  const ab = new ArrayBuffer(byteString.length);
-  const ia = new Uint8Array(ab);
-  for (let i = 0; i < byteString.length; i++) {
-    ia[i] = byteString.charCodeAt(i);
+  // console.log("Extracted mimeType:", mimeString);
+
+  try {
+    const byteString = atob(base64Data);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    // console.log("Blob conversion successful.");
+    return new Blob([ab], { type: mimeString });
+  } catch (e) {
+    console.error("Error during atob or Blob creation:", e, "Base64 data (first 50 chars):", base64Data.substring(0,50) + "...");
+    throw new Error(`Error converting base64 to Blob: ${(e as Error).message}`);
   }
-  return new Blob([ab], { type: mimeString });
 }
 
 export const ProductProvider = ({ children }: { children: ReactNode }) => {
@@ -73,93 +83,138 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     setLoadingProducts(true);
+    // console.log("ProductProvider: Setting up Firestore listener...");
     const q = query(collection(db, PRODUCTS_COLLECTION));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      // console.log("ProductProvider: Firestore snapshot received.");
       const productsData: Product[] = [];
       querySnapshot.forEach((doc) => {
         productsData.push({ id: doc.id, ...doc.data() } as Product);
       });
       setProducts(productsData);
       setLoadingProducts(false);
+      // console.log("ProductProvider: Products loaded and state updated.", productsData.length, "items");
     }, (error) => {
-      console.error("Error fetching products from Firestore: ", error);
+      console.error("ProductProvider: Error fetching products from Firestore: ", error);
       toast({
         title: "Error al cargar productos",
-        description: "No se pudieron obtener los datos de la base de datos.",
+        description: `No se pudieron obtener los datos. Código: ${(error as FirebaseStorageError).code || 'Desconocido'}`,
         variant: "destructive",
       });
       setLoadingProducts(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      // console.log("ProductProvider: Unsubscribing from Firestore listener.");
+      unsubscribe();
+    }
   }, [toast]);
 
   const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'userId'>) => {
+    // console.log("addProduct: Called with productData:", productData.name);
     let imageUrlToSave = productData.imageUrl;
 
     if (productData.imageUrl && productData.imageUrl.startsWith('data:image')) {
+      // console.log("addProduct: Image is a data URI. Attempting to upload to Firebase Storage.");
       toast({ title: "Procesando imagen generada...", description: "Subiendo a Firebase Storage. Esto puede tomar unos momentos." });
       try {
+        // console.log("addProduct: Converting data URI to Blob...");
         const blob = dataURItoBlob(productData.imageUrl);
+        // console.log("addProduct: Blob created, MimeType:", blob.type, "Size:", blob.size);
         const imageName = `product_${Date.now()}_${productData.name.replace(/\s+/g, '_').toLowerCase()}.png`;
         const storageRefPath = `product-images/${imageName}`;
+        // console.log("addProduct: Storage path:", storageRefPath);
         const imageRef = storageFirebaseRef(storage, storageRefPath);
         
+        // console.log("addProduct: Starting uploadBytesResumable...");
         const uploadTask = uploadBytesResumable(imageRef, blob);
         
+        // console.log("addProduct: Awaiting uploadTask completion...");
         await uploadTask; 
+        // console.log("addProduct: Upload task completed.");
         
+        // console.log("addProduct: Getting download URL...");
         imageUrlToSave = await getDownloadURL(imageRef);
+        // console.log("addProduct: Download URL obtained:", imageUrlToSave);
         toast({ title: "Imagen Subida", description: "La imagen generada por IA se ha guardado correctamente en Storage.", variant: "default" });
       } catch (error) {
-        const err = error as Error;
-        console.error("Error uploading image to Firebase Storage: ", err);
-        toast({ title: "Error al subir imagen de IA", description: `No se pudo guardar la imagen. Se usará un marcador. Detalle: ${err.message}`, variant: "destructive" });
+        console.error("addProduct: Error uploading image to Firebase Storage: ", error);
+        let storageErrorMessage = "No se pudo guardar la imagen. Se usará un marcador.";
+        if (typeof error === 'object' && error !== null && 'code' in error && typeof (error as {code: string}).code === 'string') {
+          storageErrorMessage += ` Código: ${(error as {code: string}).code}`;
+        } else if (error instanceof Error) {
+          storageErrorMessage += ` Detalle: ${error.message}`;
+        }
+        toast({ 
+          title: "Error al subir imagen de IA", 
+          description: storageErrorMessage, 
+          variant: "destructive" 
+        });
         imageUrlToSave = 'https://placehold.co/300x200.png'; // Fallback
       }
+    } else {
+      // console.log("addProduct: Image is not a data URI or no image URL provided. Using:", imageUrlToSave || "No image URL");
     }
 
     try {
+      // console.log("addProduct: Attempting to add document to Firestore with imageUrl:", imageUrlToSave);
       await addDoc(collection(db, PRODUCTS_COLLECTION), {
         ...productData,
         imageUrl: imageUrlToSave,
         // userId: user?.uid, // Optional: associate product with user
         // createdAt: serverTimestamp() // Optional: add a server timestamp
       });
+      // console.log("addProduct: Document added to Firestore successfully for product:", productData.name);
       toast({ title: "Producto Agregado", description: `"${productData.name}" se agregó exitosamente.`});
     } catch (error) {
-      const err = error as Error;
-      console.error("Error adding product to Firestore: ", err);
+      console.error("addProduct: Error adding product to Firestore: ", error);
+      let firestoreErrorMessage = "No se pudo guardar el producto en la base de datos.";
+      if (typeof error === 'object' && error !== null && 'code' in error && typeof (error as {code: string}).code === 'string') {
+        firestoreErrorMessage += ` Código: ${(error as {code: string}).code}`;
+      } else if (error instanceof Error) {
+        firestoreErrorMessage += ` Detalle: ${error.message}`;
+      }
       toast({
         title: "Error al agregar producto",
-        description: `No se pudo guardar el producto en la base de datos. Detalle: ${err.message}`,
+        description: firestoreErrorMessage,
         variant: "destructive",
       });
-      throw error; 
+      throw error; // Re-throw to be caught by AddItemForm or other callers
     }
   }, [toast]);
 
   const updateProductQuantity = useCallback(async (productId: string, newQuantity: number) => {
+    // console.log(`updateProductQuantity: Updating product ${productId} to quantity ${newQuantity}`);
     const productRef = doc(db, PRODUCTS_COLLECTION, productId);
     try {
       await updateDoc(productRef, {
-        quantity: Math.max(0, newQuantity)
+        quantity: Math.max(0, newQuantity) // Ensure quantity is not negative
       });
+      // console.log(`updateProductQuantity: Product ${productId} quantity updated successfully.`);
+      // Toast for quantity update is handled in EditQuantityDialog for better UX
     } catch (error) {
-      const err = error as Error;
-      console.error("Error updating product quantity in Firestore: ", err);
+      console.error("updateProductQuantity: Error updating product quantity in Firestore: ", error);
+      let updateErrorMessage = "No se pudo actualizar el producto.";
+      if (typeof error === 'object' && error !== null && 'code' in error && typeof (error as {code: string}).code === 'string') {
+        updateErrorMessage += ` Código: ${(error as {code: string}).code}`;
+      } else if (error instanceof Error) {
+        updateErrorMessage += ` Detalle: ${error.message}`;
+      }
       toast({
         title: "Error al actualizar cantidad",
-        description: `No se pudo actualizar el producto. Detalle: ${err.message}`,
+        description: updateErrorMessage,
         variant: "destructive",
       });
     }
   }, [toast]);
 
   const getProductById = useCallback((productId: string) => {
+    // console.log(`getProductById: Searching for product with ID: ${productId}`);
     return products.find(p => p.id === productId);
   }, [products]);
+
+  // console.log("ProductProvider: Initializing with loadingProducts:", loadingProducts, "Products count:", products.length);
 
   return (
     <ProductContext.Provider value={{ products, addProduct, updateProductQuantity, getProductById, loadingProducts }}>
@@ -175,4 +230,3 @@ export const useProducts = (): ProductContextType => {
   }
   return context;
 };
-
