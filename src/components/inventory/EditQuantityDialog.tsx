@@ -1,6 +1,10 @@
 
 "use client";
 
+// This file is effectively deprecated and replaced by EditProductDialog.tsx
+// It can be deleted if no longer referenced elsewhere.
+// For now, keeping it to avoid breaking direct imports if any exist, though unlikely.
+
 import type { Product } from '@/types';
 import { useProducts } from '@/context/ProductContext';
 import { Button } from '@/components/ui/button';
@@ -18,13 +22,13 @@ import { Label } from '@/components/ui/label';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import React, { useState } from 'react'; // Changed this line
+import React, { useState } from 'react'; 
 import { useToast } from '@/hooks/use-toast';
 import { Edit3 } from 'lucide-react';
 
 interface EditQuantityDialogProps {
   product: Product;
-  children?: React.ReactNode; // To allow custom trigger
+  children?: React.ReactNode; 
 }
 
 const formSchema = z.object({
@@ -45,8 +49,8 @@ export default function EditQuantityDialog({ product, children }: EditQuantityDi
     },
   });
 
-  const onSubmit: SubmitHandler<FormData> = (data) => {
-    updateProductQuantity(product.id, data.quantity);
+  const onSubmit: SubmitHandler<FormData> = async (data) => {
+    await updateProductQuantity(product.id, data.quantity);
     toast({
       title: "Inventario Actualizado",
       description: `La cantidad de "${product.name}" se ha actualizado a ${data.quantity}.`,
@@ -54,7 +58,6 @@ export default function EditQuantityDialog({ product, children }: EditQuantityDi
     setIsOpen(false);
   };
   
-  // Reset form when dialog opens or product quantity changes
   React.useEffect(() => {
     if (isOpen) {
       reset({ quantity: product.quantity });
@@ -64,7 +67,7 @@ export default function EditQuantityDialog({ product, children }: EditQuantityDi
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        {children ? children : <Button variant="outline" size="sm"><Edit3 className="h-4 w-4 mr-2" /> Editar</Button>}
+        {children ? children : <Button variant="outline" size="sm"><Edit3 className="h-4 w-4 mr-2" /> Editar Cantidad</Button>}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -99,3 +102,4 @@ export default function EditQuantityDialog({ product, children }: EditQuantityDi
     </Dialog>
   );
 }
+

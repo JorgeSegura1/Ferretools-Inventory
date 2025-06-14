@@ -12,8 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import EditQuantityDialog from './EditQuantityDialog';
-import DeleteProductDialog from './DeleteProductDialog'; // Import DeleteProductDialog
+import EditProductDialog from './EditProductDialog'; // Changed from EditQuantityDialog
+import DeleteProductDialog from './DeleteProductDialog';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProducts } from '@/context/ProductContext'; 
@@ -52,7 +52,7 @@ export default function InventoryTable({ products }: InventoryTableProps) {
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline text-2xl">Gestión de Inventario</CardTitle>
-        <CardDescription>Visualiza y actualiza las cantidades de tus productos.</CardDescription>
+        <CardDescription>Visualiza y actualiza las cantidades y detalles de tus productos.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
@@ -87,7 +87,7 @@ export default function InventoryTable({ products }: InventoryTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <EditQuantityDialog product={product} />
+                    <EditProductDialog product={product} /> {/* Changed from EditQuantityDialog */}
                     <DeleteProductDialog product={product} onConfirmDelete={() => deleteProduct(product.id)} />
                   </TableCell>
                 </TableRow>
@@ -101,4 +101,3 @@ export default function InventoryTable({ products }: InventoryTableProps) {
 
   return inventoryContent;
 }
-
