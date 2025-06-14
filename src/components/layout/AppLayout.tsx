@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LayoutGrid, ListChecks, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, UserCircle } from 'lucide-react';
+import { Home, LayoutGrid, ListChecks, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, UserCircle, Bell } from 'lucide-react'; // Added Bell
 import {
   SidebarProvider,
   Sidebar,
@@ -15,13 +15,13 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  SidebarFooter, // Added SidebarFooter
+  SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext'; // Added useAuth
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Added Avatar
+import { useAuth } from '@/context/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const baseNavItems = [
   { href: '/', label: 'Catálogo', icon: LayoutGrid, requiresAuth: false },
@@ -54,12 +54,17 @@ function SiteHeader() {
           <Wrench className="h-6 w-6 text-primary" />
           <span className="font-bold font-headline">Ferretools</span>
         </Link>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center space-x-2">
           {user ? (
-             <Avatar className="h-8 w-8">
+            <>
+              <Button variant="ghost" size="icon" aria-label="Notifications" className="h-8 w-8">
+                <Bell className="h-5 w-5" />
+              </Button>
+              <Avatar className="h-8 w-8">
                 <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
                 <AvatarFallback>{user.email?.[0].toUpperCase() || 'U'}</AvatarFallback>
               </Avatar>
+            </>
           ) : (
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">
@@ -86,12 +91,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   };
 
   const visibleNavItems = baseNavItems.filter(item => {
-    if (item.requiresAuth && !user && !loading) return false; // Hide protected routes if not logged in and not loading
+    if (item.requiresAuth && !user && !loading) return false;
     return true;
   });
 
   const currentAuthNavItems = authNavItems.filter(item => {
-    if (item.showIfLoggedOut && user) return false; // Hide login/signup if logged in
+    if (item.showIfLoggedOut && user) return false;
     return true;
   });
   
@@ -140,6 +145,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   <span className="text-sm font-medium truncate max-w-[120px]">{user.displayName || user.email}</span>
                 </div>
               </div>
+              {/* Notification Bell for Sidebar Footer when collapsed/expanded */}
+              <SidebarMenuButton
+                tooltip={{ children: "Notificaciones", className: "font-body"}}
+                className="font-body w-full group-data-[collapsible=expanded]:hidden" 
+                aria-label="Notifications"
+              >
+                <Bell className="h-5 w-5" />
+                <span className="group-data-[collapsible=icon]:hidden">Notificaciones</span>
+              </SidebarMenuButton>
               <SidebarMenuButton
                 onClick={handleSignOut}
                 tooltip={{ children: "Cerrar Sesión", className: "font-body"}}
