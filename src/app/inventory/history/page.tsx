@@ -52,26 +52,28 @@ function getProductHint(category?: string): string {
 
 export default function InventoryHistoryPage() {
   const { products, loadingProducts } = useProducts();
-  const { user, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading) return; // Wait for auth to load
+
+    if (!user) {
       router.push('/login?message=Debes iniciar sesión para ver el historial');
+    } else if (role && role !== 'admin') {
+      router.push('/?message=No tienes permisos para acceder a esta página');
     }
-  }, [user, authLoading, router]);
+  }, [user, role, authLoading, router]);
 
   const groupedAndSortedProducts = useMemo(() => {
     if (loadingProducts || !products) return {};
     
-    // Sort all products by arrivalDate descending first
     const sortedProducts = [...products].sort((a, b) => {
       const dateA = a.arrivalDate?.getTime() || 0;
       const dateB = b.arrivalDate?.getTime() || 0;
       return dateB - dateA;
     });
 
-    // Group sorted products
     return sortedProducts.reduce((acc, product) => {
       const dateKey = formatDateForHistoryKey(product.arrivalDate);
       if (!acc[dateKey]) {
@@ -83,12 +85,11 @@ export default function InventoryHistoryPage() {
   }, [products, loadingProducts]);
 
   const sortedDateKeys = useMemo(() => {
-    // Keys are already effectively sorted due to sorting products before grouping by YYYY-MM-DD keys
     return Object.keys(groupedAndSortedProducts);
   }, [groupedAndSortedProducts]);
 
 
-  if (authLoading || loadingProducts || (!user && !authLoading)) {
+  if (authLoading || (user && !role && !authLoading) || loadingProducts) {
     return (
       <div className="container mx-auto py-8 text-center flex justify-center items-center min-h-[300px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -97,6 +98,11 @@ export default function InventoryHistoryPage() {
     );
   }
   
+  if (!user || role !== 'admin') {
+    // This state should ideally be handled by the redirect, but as a fallback.
+    return <div className="container mx-auto py-8 text-center">No tienes permisos para ver esta página. Redirigiendo...</div>;
+  }
+
   if (sortedDateKeys.length === 0) {
     return (
       <div className="container mx-auto py-12 text-center">
@@ -120,7 +126,7 @@ export default function InventoryHistoryPage() {
         </CardHeader>
         <CardContent>
           <Accordion type="single" collapsible className="w-full">
-            {sortedDateKeys.map((dateKey, index) => (
+            {sortedDateKeys.map((dateKey) => (
               <AccordionItem value={dateKey} key={dateKey}>
                 <AccordionTrigger className="text-lg hover:no-underline">
                   <div className="flex justify-between items-center w-full pr-2">
@@ -129,7 +135,7 @@ export default function InventoryHistoryPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <ScrollArea className="h-[400px] pr-4"> {/* Added ScrollArea */}
+                  <ScrollArea className="h-[400px] pr-4">
                     <ul className="space-y-4 pt-2">
                       {groupedAndSortedProducts[dateKey].map((product) => (
                         <li key={product.id} className="flex items-start p-3 border rounded-lg shadow-sm hover:bg-muted/50 transition-colors">

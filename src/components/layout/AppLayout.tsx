@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, ListChecks, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, Bell, History } from 'lucide-react'; // Added History
+import { LayoutGrid, ListChecks, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, Bell, History } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -25,9 +25,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const baseNavItems = [
   { href: '/', label: 'Catálogo', icon: LayoutGrid, requiresAuth: false },
-  { href: '/inventory', label: 'Inventario', icon: Warehouse, requiresAuth: true },
-  { href: '/inventory/add', label: 'Agregar Artículo', icon: PlusCircle, requiresAuth: true },
-  { href: '/inventory/history', label: 'Historial de Productos', icon: History, requiresAuth: true }, // New item
+  { href: '/inventory', label: 'Inventario', icon: Warehouse, requiresAuth: true, requiredRole: 'admin' },
+  { href: '/inventory/add', label: 'Agregar Artículo', icon: PlusCircle, requiresAuth: true, requiredRole: 'admin' },
+  { href: '/inventory/history', label: 'Historial de Productos', icon: History, requiresAuth: true, requiredRole: 'admin' },
 ];
 
 const authNavItems = [
@@ -83,7 +83,7 @@ function SiteHeader() {
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { user, signOut, loading } = useAuth();
+  const { user, role, signOut, loading } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -92,11 +92,21 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   };
 
   const visibleNavItems = baseNavItems.filter(item => {
-    if (item.requiresAuth && !user && !loading) return false;
-    return true;
+    if (!item.requiresAuth) return true; // Public item
+
+    // For auth-required items:
+    if (loading) return false; // Don't show auth-required items while auth state (user & role) is loading. Avoids flash.
+    if (!user) return false;   // No user, don't show.
+
+    if (item.requiredRole === 'admin') {
+      if (!role) return false; // Role not yet determined (should be quick after user loads), don't show admin items.
+      return role === 'admin';
+    }
+    return true; // Auth required, user exists, no specific role needed for this item.
   });
 
   const currentAuthNavItems = authNavItems.filter(item => {
+    if (loading) return false; // Don't show login/signup if loading
     if (item.showIfLoggedOut && user) return false;
     return true;
   });
