@@ -63,7 +63,6 @@ export default function InventoryPage() {
         </div>
       ) : (
         <>
-          <h2 className="text-2xl font-bold font-headline text-primary mb-4 mt-8">Productos que Llegaron Hoy</h2>
           <TodaysArrivalsCard products={todaysArrivals} />
           <h2 className="text-2xl font-bold font-headline text-primary mb-4 mt-8">Inventario General</h2>
           <InventoryTable products={products} />
