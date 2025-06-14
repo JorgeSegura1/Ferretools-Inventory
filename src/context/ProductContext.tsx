@@ -9,12 +9,13 @@ import {
   addDoc, 
   doc, 
   updateDoc,
+  deleteDoc, // Import deleteDoc
   query,
   serverTimestamp, 
   Timestamp,
-  where, // Added: for querying by name
-  getDocs, // Added: for executing the query
-  limit // Added: to limit to one result
+  where, 
+  getDocs, 
+  limit 
 } from 'firebase/firestore';
 import { 
   ref as storageFirebaseRef,
@@ -29,6 +30,7 @@ interface ProductContextType {
   products: Product[];
   addProduct: (product: Omit<Product, 'id' | 'userId' | 'arrivalDate'>) => Promise<void>; 
   updateProductQuantity: (productId: string, newQuantity: number) => Promise<void>; 
+  deleteProduct: (productId: string) => Promise<void>; // Add deleteProduct
   getProductById: (productId: string) => Product | undefined;
   loadingProducts: boolean;
 }
@@ -112,7 +114,6 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
   const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'userId' | 'arrivalDate'>) => {
     let imageUrlToSave = productData.imageUrl;
 
-    // Image processing logic (common for add and update)
     if (productData.imageUrl && productData.imageUrl.startsWith('data:image')) {
       toast({ title: "Procesando imagen generada...", description: "Subiendo a Firebase Storage..." });
       try {
@@ -129,9 +130,10 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         console.error("addProduct: Error uploading image to Firebase Storage: ", error);
         let storageErrorMessage = "No se pudo guardar la imagen generada. Se usará un marcador.";
         if (error && typeof error === 'object' && 'code' in error) {
-          storageErrorMessage += ` Código: ${(error as {code: string}).code}`;
+            const firebaseError = error as FirebaseStorageError; // Cast to FirebaseStorageError
+            storageErrorMessage += ` Código: ${firebaseError.code}. Mensaje: ${firebaseError.message}`;
         } else if (error instanceof Error) {
-          storageErrorMessage += ` Detalle: ${error.message}`;
+            storageErrorMessage += ` Detalle: ${error.message}`;
         }
         toast({ 
           title: "Error al subir imagen de IA", 
@@ -144,32 +146,29 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       imageUrlToSave = 'https://placehold.co/300x200.png';
     }
 
-    // Check if product already exists
     const q = query(collection(db, PRODUCTS_COLLECTION), where("name", "==", productData.name), limit(1));
     
     try {
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
-        // Product exists, update it
         const existingDoc = querySnapshot.docs[0];
         const existingProductData = existingDoc.data() as Product;
         
         const updatedProductFields = {
-          name: productData.name, // In case casing or minor details changed, though query is exact
+          name: productData.name,
           description: productData.description,
-          price: productData.price, // Update price to the new one
-          quantity: (existingProductData.quantity || 0) + productData.quantity, // Sum quantities
+          price: productData.price,
+          quantity: (existingProductData.quantity || 0) + productData.quantity,
           category: productData.category,
-          imageUrl: imageUrlToSave, // Use the newly processed/determined image URL
-          arrivalDate: serverTimestamp() // Update arrivalDate to mark restock/update
+          imageUrl: imageUrlToSave,
+          arrivalDate: serverTimestamp()
         };
 
         await updateDoc(existingDoc.ref, updatedProductFields);
         toast({ title: "Producto Actualizado", description: `"${productData.name}" actualizado: cantidad sumada y precio/detalles actualizados.`});
 
       } else {
-        // Product does not exist, add new
         await addDoc(collection(db, PRODUCTS_COLLECTION), {
           ...productData,
           imageUrl: imageUrlToSave,
@@ -190,7 +189,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         description: firestoreErrorMessage,
         variant: "destructive",
       });
-      throw error; // Re-throw error so AddItemForm can catch it if needed
+      throw error; 
     }
   }, [toast]);
 
@@ -198,9 +197,8 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     const productRef = doc(db, PRODUCTS_COLLECTION, productId);
     try {
       await updateDoc(productRef, {
-        quantity: Math.max(0, newQuantity) // Ensure quantity doesn't go below 0
+        quantity: Math.max(0, newQuantity) 
       });
-      // Toast for this is handled in EditQuantityDialog
     } catch (error) {
       console.error("updateProductQuantity: Error updating product quantity in Firestore: ", error);
       let updateErrorMessage = "No se pudo actualizar la cantidad del producto.";
@@ -217,12 +215,36 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [toast]);
 
+  const deleteProduct = useCallback(async (productId: string) => {
+    const productRef = doc(db, PRODUCTS_COLLECTION, productId);
+    try {
+      await deleteDoc(productRef);
+      toast({
+        title: "Producto Eliminado",
+        description: "El producto ha sido eliminado exitosamente del inventario.",
+      });
+    } catch (error) {
+      console.error("deleteProduct: Error deleting product from Firestore: ", error);
+      let deleteErrorMessage = "No se pudo eliminar el producto.";
+      if (error && typeof error === 'object' && 'code' in error) {
+        deleteErrorMessage += ` Código: ${(error as {code: string}).code}`;
+      } else if (error instanceof Error) {
+        deleteErrorMessage += ` Detalle: ${error.message}`;
+      }
+      toast({
+        title: "Error al eliminar producto",
+        description: deleteErrorMessage,
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
   const getProductById = useCallback((productId: string) => {
     return products.find(p => p.id === productId);
   }, [products]);
 
   return (
-    <ProductContext.Provider value={{ products, addProduct, updateProductQuantity, getProductById, loadingProducts }}>
+    <ProductContext.Provider value={{ products, addProduct, updateProductQuantity, deleteProduct, getProductById, loadingProducts }}>
       {children}
     </ProductContext.Provider>
   );

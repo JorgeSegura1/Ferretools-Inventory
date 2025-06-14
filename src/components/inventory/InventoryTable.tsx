@@ -13,10 +13,11 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import EditQuantityDialog from './EditQuantityDialog';
+import DeleteProductDialog from './DeleteProductDialog'; // Import DeleteProductDialog
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useProducts } from '@/context/ProductContext'; // Import useProducts
-import { Loader2 } from 'lucide-react'; // Import Loader2
+import { useProducts } from '@/context/ProductContext'; 
+import { Loader2 } from 'lucide-react'; 
 
 interface InventoryTableProps {
   products: Product[];
@@ -24,18 +25,18 @@ interface InventoryTableProps {
 
 function getProductHint(category?: string): string {
   if (category) {
-    const words = category.split(' ').filter(Boolean); // filter out empty strings from multiple spaces
+    const words = category.split(' ').filter(Boolean); 
     if (words.length === 0) return 'hardware tool';
     if (words.length === 1) return words[0];
     return words.slice(0, 2).join(' ');
   }
-  return 'hardware tool'; // Default hint
+  return 'hardware tool'; 
 }
 
 export default function InventoryTable({ products }: InventoryTableProps) {
-  const { loadingProducts } = useProducts(); // Get loading state
+  const { loadingProducts, deleteProduct } = useProducts(); 
 
-  if (loadingProducts && products.length === 0) { // Show loader if loading and no products are available yet
+  if (loadingProducts && products.length === 0) { 
     return (
         <div className="flex justify-center items-center h-64">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -85,8 +86,9 @@ export default function InventoryTable({ products }: InventoryTableProps) {
                       {product.quantity}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
                     <EditQuantityDialog product={product} />
+                    <DeleteProductDialog product={product} onConfirmDelete={() => deleteProduct(product.id)} />
                   </TableCell>
                 </TableRow>
               ))}
