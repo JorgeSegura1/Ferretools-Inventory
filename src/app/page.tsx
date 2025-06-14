@@ -4,22 +4,111 @@
 import ProductList from '@/components/products/ProductList';
 import { useProducts } from '@/context/ProductContext';
 import { Input } from '@/components/ui/input';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Filter, ListTree, Tag } from 'lucide-react';
+import { Filter, ListTree, Tag, XIcon } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
+import type { Product } from '@/types';
 
 export default function HomePage() {
-  const { products } = useProducts();
+  const { products, loadingProducts } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  
+  const [minMaxPrice, setMinMaxPrice] = useState<[number, number]>([0, 1000]);
+  const [currentPriceRange, setCurrentPriceRange] = useState<[number, number]>([0, 1000]);
+  const [showInStockOnly, setShowInStockOnly] = useState(false);
+  const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false);
+  
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  useEffect(() => {
+    if (products.length > 0) {
+      const prices = products.map(p => p.price);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      setMinMaxPrice([min, max]);
+      setCurrentPriceRange([min, max]); // Initialize currentPriceRange
+    }
+  }, [products]);
+
+  const allCategories = useMemo(() => {
+    if (loadingProducts) return [];
+    const categories = products
+      .map(product => product.category)
+      .filter((category): category is string => !!category); // Type guard
+    return [...new Set(categories)].sort();
+  }, [products, loadingProducts]);
 
   const filteredProducts = useMemo(() => {
-    if (!searchTerm) return products;
-    return products.filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
+    let tempProducts = products;
+
+    if (searchTerm) {
+      tempProducts = tempProducts.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    if (selectedCategory) {
+      tempProducts = tempProducts.filter(product => product.category === selectedCategory);
+    }
+    
+    if (showInStockOnly) {
+      tempProducts = tempProducts.filter(product => product.quantity > 0);
+    } else if (showOutOfStockOnly) {
+      tempProducts = tempProducts.filter(product => product.quantity === 0);
+    }
+
+    tempProducts = tempProducts.filter(product => 
+      product.price >= currentPriceRange[0] && product.price <= currentPriceRange[1]
     );
-  }, [products, searchTerm]);
+
+    return tempProducts;
+  }, [products, searchTerm, selectedCategory, showInStockOnly, showOutOfStockOnly, currentPriceRange]);
+
+  const handleCategorySelect = (category: string | null) => {
+    setSelectedCategory(category);
+  };
+
+  const handleClearAdvancedFilters = () => {
+    setShowInStockOnly(false);
+    setShowOutOfStockOnly(false);
+    setCurrentPriceRange(minMaxPrice); // Reset to full range
+  };
+  
+  const activeAdvancedFiltersCount = [
+    showInStockOnly,
+    showOutOfStockOnly,
+    currentPriceRange[0] !== minMaxPrice[0] || currentPriceRange[1] !== minMaxPrice[1]
+  ].filter(Boolean).length;
+
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory(null);
+    handleClearAdvancedFilters();
+  };
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -27,30 +116,130 @@ export default function HomePage() {
         <h1 className="text-4xl font-bold font-headline text-primary">Catálogo de Productos</h1>
         <p className="text-lg text-muted-foreground mt-2">Encuentra todo lo que necesitas para tus proyectos.</p>
       </header>
-      <div className="mb-6 max-w-xl mx-auto">
+      
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
         <Input
           type="text"
-          placeholder="Buscar productos..."
+          placeholder="Buscar productos por nombre, descripción..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full"
         />
+        {(searchTerm || selectedCategory || activeAdvancedFiltersCount > 0) && (
+          <Button onClick={resetAllFilters} variant="ghost" className="text-sm justify-self-start md:justify-self-end">
+            <XIcon className="mr-2 h-4 w-4" /> Limpiar todos los filtros
+          </Button>
+        )}
       </div>
+
       <div className="mb-8 flex flex-wrap justify-center items-center gap-2 sm:gap-3 px-2">
-        <Button variant="outline" size="sm" className="text-sm">
-          <ListTree className="mr-2 h-3.5 w-3.5" />
-          Categoría
-        </Button>
-        <Button variant="outline" size="sm" className="text-sm">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="text-sm">
+              <ListTree className="mr-2 h-3.5 w-3.5" />
+              {selectedCategory || "Categoría"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>Seleccionar Categoría</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => handleCategorySelect(null)}>
+              Todas las categorías
+            </DropdownMenuItem>
+            {allCategories.map(category => (
+              <DropdownMenuItem key={category} onSelect={() => handleCategorySelect(category)}>
+                {category}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Button variant="outline" size="sm" className="text-sm" disabled>
           <Tag className="mr-2 h-3.5 w-3.5" />
           Marca
         </Button>
-        <Button variant="outline" size="sm" className="text-sm">
-          <Filter className="mr-2 h-3.5 w-3.5" />
-          Más Filtros
-        </Button>
+
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm" className="text-sm relative">
+              <Filter className="mr-2 h-3.5 w-3.5" />
+              Más Filtros
+              {activeAdvancedFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+                  {activeAdvancedFiltersCount}
+                </span>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Filtros Avanzados</SheetTitle>
+              <SheetDescription>
+                Aplica filtros adicionales para refinar tu búsqueda.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="grid gap-6 py-6">
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Disponibilidad</Label>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="inStock" 
+                    checked={showInStockOnly} 
+                    onCheckedChange={(checked) => {
+                      setShowInStockOnly(!!checked);
+                      if (checked) setShowOutOfStockOnly(false);
+                    }}
+                  />
+                  <Label htmlFor="inStock">Mostrar solo en stock</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="outOfStock" 
+                    checked={showOutOfStockOnly} 
+                    onCheckedChange={(checked) => {
+                      setShowOutOfStockOnly(!!checked);
+                      if (checked) setShowInStockOnly(false);
+                    }}
+                  />
+                  <Label htmlFor="outOfStock">Mostrar solo agotados</Label>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="priceRange" className="text-base font-semibold">
+                  Rango de Precios: ${currentPriceRange[0]} - ${currentPriceRange[1]}
+                </Label>
+                <Slider
+                  id="priceRange"
+                  min={minMaxPrice[0]}
+                  max={minMaxPrice[1]}
+                  step={1} // Adjust step as needed, e.g., 0.01 for cents
+                  value={currentPriceRange}
+                  onValueChange={(value) => setCurrentPriceRange(value as [number, number])}
+                  minStepsBetweenThumbs={0}
+                  disabled={products.length === 0}
+                />
+                 <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>${minMaxPrice[0]}</span>
+                    <span>${minMaxPrice[1]}</span>
+                </div>
+              </div>
+            </div>
+            <SheetFooter className="mt-auto">
+              <Button variant="outline" onClick={handleClearAdvancedFilters} className="w-full sm:w-auto">Limpiar Filtros</Button>
+              <SheetClose asChild>
+                <Button type="button" className="w-full sm:w-auto">Aplicar</Button>
+              </SheetClose>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
       </div>
-      <ProductList products={filteredProducts} />
+      
+      {loadingProducts && products.length === 0 ? (
+        <p className="text-center text-muted-foreground">Cargando productos...</p>
+      ) : (
+        <ProductList products={filteredProducts} />
+      )}
     </div>
   );
 }
