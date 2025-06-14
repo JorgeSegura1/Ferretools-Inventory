@@ -143,10 +143,10 @@ export default function InventoryHistoryPage() {
                           />
                           <div className="flex-grow">
                             <h4 className="font-semibold text-md">{product.name}</h4>
-                            <p className="text-sm text-muted-foreground">
+                            <div className="text-sm text-muted-foreground">
                               {product.category && <Badge variant="secondary" className="mr-2">{product.category}</Badge>}
                               Cantidad: {product.quantity} | Precio: {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
-                            </p>
+                            </div>
                           </div>
                         </li>
                       ))}
@@ -161,3 +161,4 @@ export default function InventoryHistoryPage() {
     </div>
   );
 }
+
