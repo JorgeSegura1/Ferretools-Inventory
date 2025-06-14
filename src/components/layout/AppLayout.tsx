@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, LayoutGrid, ListChecks, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, UserCircle, Bell } from 'lucide-react'; // Added Bell
+import { LayoutGrid, ListChecks, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, Bell, History } from 'lucide-react'; // Added History
 import {
   SidebarProvider,
   Sidebar,
@@ -27,6 +27,7 @@ const baseNavItems = [
   { href: '/', label: 'Catálogo', icon: LayoutGrid, requiresAuth: false },
   { href: '/inventory', label: 'Inventario', icon: Warehouse, requiresAuth: true },
   { href: '/inventory/add', label: 'Agregar Artículo', icon: PlusCircle, requiresAuth: true },
+  { href: '/inventory/history', label: 'Historial de Ingresos', icon: History, requiresAuth: true }, // New item
 ];
 
 const authNavItems = [
@@ -145,7 +146,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   <span className="text-sm font-medium truncate max-w-[120px]">{user.displayName || user.email}</span>
                 </div>
               </div>
-              {/* Notification Bell for Sidebar Footer when collapsed/expanded */}
               <SidebarMenuButton
                 tooltip={{ children: "Notificaciones", className: "font-body"}}
                 className="font-body w-full group-data-[collapsible=expanded]:hidden" 

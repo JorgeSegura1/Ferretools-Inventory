@@ -7,7 +7,6 @@ export type Product = {
   quantity: number;
   imageUrl: string;
   category?: string; // Optional: e.g., "tools", "paint", "fasteners"
+  arrivalDate?: Date; // Optional: to store the arrival date of the product
   // userId?: string; // Optional: to associate product with a user
-  // createdAt?: any; // Optional: for Firestore serverTimestamp
 };
-
