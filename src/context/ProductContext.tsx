@@ -10,8 +10,11 @@ import {
   doc, 
   updateDoc,
   query,
-  serverTimestamp, // Import serverTimestamp
-  Timestamp // Import Timestamp for type checking
+  serverTimestamp, 
+  Timestamp,
+  where, // Added: for querying by name
+  getDocs, // Added: for executing the query
+  limit // Added: to limit to one result
 } from 'firebase/firestore';
 import { 
   ref as storageFirebaseRef,
@@ -84,7 +87,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         productsData.push({ 
           id: doc.id, 
           ...data,
-          arrivalDate // This will be Date object or undefined
+          arrivalDate 
         } as Product);
       });
       setProducts(productsData);
@@ -109,6 +112,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
   const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'userId' | 'arrivalDate'>) => {
     let imageUrlToSave = productData.imageUrl;
 
+    // Image processing logic (common for add and update)
     if (productData.imageUrl && productData.imageUrl.startsWith('data:image')) {
       toast({ title: "Procesando imagen generada...", description: "Subiendo a Firebase Storage..." });
       try {
@@ -140,27 +144,53 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       imageUrlToSave = 'https://placehold.co/300x200.png';
     }
 
+    // Check if product already exists
+    const q = query(collection(db, PRODUCTS_COLLECTION), where("name", "==", productData.name), limit(1));
+    
     try {
-      await addDoc(collection(db, PRODUCTS_COLLECTION), {
-        ...productData,
-        imageUrl: imageUrlToSave,
-        arrivalDate: serverTimestamp() // Add current server timestamp as arrivalDate
-      });
-      toast({ title: "Producto Agregado", description: `"${productData.name}" se agregó exitosamente.`});
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // Product exists, update it
+        const existingDoc = querySnapshot.docs[0];
+        const existingProductData = existingDoc.data() as Product;
+        
+        const updatedProductFields = {
+          name: productData.name, // In case casing or minor details changed, though query is exact
+          description: productData.description,
+          price: productData.price, // Update price to the new one
+          quantity: (existingProductData.quantity || 0) + productData.quantity, // Sum quantities
+          category: productData.category,
+          imageUrl: imageUrlToSave, // Use the newly processed/determined image URL
+          arrivalDate: serverTimestamp() // Update arrivalDate to mark restock/update
+        };
+
+        await updateDoc(existingDoc.ref, updatedProductFields);
+        toast({ title: "Producto Actualizado", description: `"${productData.name}" actualizado: cantidad sumada y precio/detalles actualizados.`});
+
+      } else {
+        // Product does not exist, add new
+        await addDoc(collection(db, PRODUCTS_COLLECTION), {
+          ...productData,
+          imageUrl: imageUrlToSave,
+          arrivalDate: serverTimestamp()
+        });
+        toast({ title: "Producto Agregado", description: `"${productData.name}" se agregó exitosamente.`});
+      }
     } catch (error) {
-      console.error("addProduct: Error adding product to Firestore: ", error);
-      let firestoreErrorMessage = "No se pudo guardar el producto en la base de datos.";
+      console.error("addProduct/updateProduct: Error interacting with Firestore: ", error);
+      let firestoreErrorMessage = "No se pudo guardar o actualizar el producto.";
       if (error && typeof error === 'object' && 'code' in error) {
         firestoreErrorMessage += ` Código: ${(error as {code: string}).code}`;
       } else if (error instanceof Error) {
         firestoreErrorMessage += ` Detalle: ${error.message}`;
       }
       toast({
-        title: "Error al agregar producto",
+        title: "Error en base de datos",
         description: firestoreErrorMessage,
         variant: "destructive",
       });
-      throw error;
+      throw error; // Re-throw error so AddItemForm can catch it if needed
     }
   }, [toast]);
 
@@ -168,8 +198,9 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     const productRef = doc(db, PRODUCTS_COLLECTION, productId);
     try {
       await updateDoc(productRef, {
-        quantity: Math.max(0, newQuantity)
+        quantity: Math.max(0, newQuantity) // Ensure quantity doesn't go below 0
       });
+      // Toast for this is handled in EditQuantityDialog
     } catch (error) {
       console.error("updateProductQuantity: Error updating product quantity in Firestore: ", error);
       let updateErrorMessage = "No se pudo actualizar la cantidad del producto.";
@@ -204,3 +235,4 @@ export const useProducts = (): ProductContextType => {
   }
   return context;
 };
+
