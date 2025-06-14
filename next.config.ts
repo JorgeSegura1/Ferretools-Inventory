@@ -25,7 +25,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'www.gaestopas.com', // Nuevo hostname añadido
+        hostname: 'www.gaestopas.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'artiplan.net', // Nuevo hostname añadido
         port: '',
         pathname: '/**',
       }
