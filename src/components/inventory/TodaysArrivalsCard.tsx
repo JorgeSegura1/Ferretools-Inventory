@@ -26,7 +26,7 @@ export default function TodaysArrivalsCard({ products }: TodaysArrivalsCardProps
     return (
       <Card className="shadow-md mb-8">
         <CardHeader>
-          <CardTitle className="font-headline text-xl text-primary">Ingresos de Hoy</CardTitle>
+          <CardTitle className="font-headline text-xl text-primary">Productos que Llegaron Hoy</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">No se han registrado ingresos de productos hoy.</p>
@@ -38,7 +38,7 @@ export default function TodaysArrivalsCard({ products }: TodaysArrivalsCardProps
   return (
     <Card className="shadow-md mb-8">
       <CardHeader>
-        <CardTitle className="font-headline text-xl text-primary">Ingresos de Hoy ({products.length})</CardTitle>
+        <CardTitle className="font-headline text-xl text-primary">Productos que Llegaron Hoy ({products.length})</CardTitle>
         <CardDescription>Productos que llegaron o se agregaron al inventario hoy.</CardDescription>
       </CardHeader>
       <CardContent>

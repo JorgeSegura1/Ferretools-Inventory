@@ -101,7 +101,7 @@ export default function InventoryHistoryPage() {
     return (
       <div className="container mx-auto py-12 text-center">
         <PackageSearch className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-        <h1 className="text-2xl font-semibold mb-2">Historial de Ingresos Vacío</h1>
+        <h1 className="text-2xl font-semibold mb-2">Historial de Productos Vacío</h1>
         <p className="text-muted-foreground">Aún no se han registrado ingresos de productos.</p>
       </div>
     );
@@ -112,7 +112,7 @@ export default function InventoryHistoryPage() {
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="text-3xl font-bold font-headline text-primary flex items-center">
-            <CalendarDays className="mr-3 h-8 w-8" /> Historial de Ingresos de Productos
+            <CalendarDays className="mr-3 h-8 w-8" /> Historial de Productos
           </CardTitle>
           <CardDescription>
             Revisa los productos que han llegado a la ferretería, agrupados por fecha de ingreso.
@@ -161,4 +161,3 @@ export default function InventoryHistoryPage() {
     </div>
   );
 }
-

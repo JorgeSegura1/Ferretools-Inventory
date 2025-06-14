@@ -27,7 +27,7 @@ const baseNavItems = [
   { href: '/', label: 'Catálogo', icon: LayoutGrid, requiresAuth: false },
   { href: '/inventory', label: 'Inventario', icon: Warehouse, requiresAuth: true },
   { href: '/inventory/add', label: 'Agregar Artículo', icon: PlusCircle, requiresAuth: true },
-  { href: '/inventory/history', label: 'Historial de Ingresos', icon: History, requiresAuth: true }, // New item
+  { href: '/inventory/history', label: 'Historial de Productos', icon: History, requiresAuth: true }, // New item
 ];
 
 const authNavItems = [
