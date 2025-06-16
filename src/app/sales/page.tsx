@@ -11,7 +11,7 @@ import { Loader2, DollarSign, ShoppingBag, Info, Image as ImageIcon } from 'luci
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// Removed ScrollArea import as it's being replaced by a simple div
 import NextImage from 'next/image'; // Renamed to avoid conflict
 
 // Helper to format date for grouping (YYYY-MM-DD for sortability and uniqueness)
@@ -164,8 +164,9 @@ export default function SalesPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <ScrollArea className="h-auto max-h-[600px] pr-2 sm:pr-4">
-                    <div className="space-y-3 pt-2">
+                  {/* Replaced ScrollArea with a div using Tailwind for max-height and overflow */}
+                  <div className="max-h-[600px] overflow-y-auto">
+                    <div className="space-y-3 pt-2 pr-2 sm:pr-4"> {/* Added padding here to avoid content under scrollbar */}
                       {summary.transactions.map(transaction => (
                         <Card key={transaction.id} className="bg-muted/30">
                           <CardHeader className="pb-2 pt-3 px-3 sm:px-4">
@@ -204,7 +205,7 @@ export default function SalesPage() {
                         </Card>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
             ))}
@@ -214,3 +215,4 @@ export default function SalesPage() {
     </div>
   );
 }
+
