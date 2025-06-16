@@ -41,7 +41,7 @@ interface ProductContextType {
   updateProductQuantity: (productId: string, newQuantity: number) => Promise<void>; 
   updateProductDetails: (productId: string, data: ProductDetailsUpdateData) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
-  processSaleAndUpdateStock: (itemsToSell: SaleItem[]) => Promise<boolean>; // Changed to accept SaleItem[]
+  processSaleAndUpdateStock: (itemsToSell: SaleItem[]) => Promise<boolean>;
   getProductById: (productId: string) => Product | undefined;
   loadingProducts: boolean;
 }
@@ -352,14 +352,20 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         batch.update(productRef, { quantity: newQuantity });
 
         // Prepare item for sale record
-        saleRecordItems.push({
+        const soldItem: SoldItemDetails = {
           productId: item.productId,
-          productName: item.name, // Name at the time of sale
+          productName: item.name,
           quantitySold: item.quantityToSell,
-          priceAtSale: item.price, // Price per unit at the time of sale
-          category: item.category,
-          imageUrl: item.imageUrl // Image at the time of sale
-        });
+          priceAtSale: item.price,
+        };
+        if (item.category) {
+          soldItem.category = item.category;
+        }
+        if (item.imageUrl) { // Assuming imageUrl on SaleItem is always a string
+          soldItem.imageUrl = item.imageUrl;
+        }
+        saleRecordItems.push(soldItem);
+        
         saleTotalAmount += item.price * item.quantityToSell;
         saleTotalItems += item.quantityToSell;
       }
@@ -436,3 +442,4 @@ export const useProducts = (): ProductContextType => {
   }
   return context;
 };
+
