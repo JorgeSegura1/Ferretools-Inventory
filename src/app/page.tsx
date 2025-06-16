@@ -174,8 +174,8 @@ export default function HomePage() {
       productId: item.productId,
       quantitySold: item.quantityToSell,
       priceAtSale: item.price,
-      productName: item.name,
-      category: item.category,
+      productName: item.name, 
+      category: item.category, 
       imageUrl: item.imageUrl
     }));
     
@@ -221,10 +221,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="mb-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center sm:justify-center gap-2">
+      <div className="mb-8 flex flex-row flex-wrap items-center justify-start gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="text-sm w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="text-sm">
               <ListTree className="mr-2 h-3.5 w-3.5" />
               {selectedCategory || "Categoría"}
             </Button>
@@ -243,14 +243,14 @@ export default function HomePage() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button variant="outline" size="sm" className="text-sm w-full sm:w-auto" disabled>
+        <Button variant="outline" size="sm" className="text-sm" disabled>
           <Tag className="mr-2 h-3.5 w-3.5" />
           Marca
         </Button>
 
         <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="text-sm relative w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="text-sm relative">
               <Filter className="mr-2 h-3.5 w-3.5" />
               Más Filtros
               {activeAdvancedFiltersCount > 0 && (
@@ -352,3 +352,4 @@ export default function HomePage() {
     </div>
   );
 }
+
