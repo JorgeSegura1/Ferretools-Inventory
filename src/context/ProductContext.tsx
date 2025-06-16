@@ -356,14 +356,17 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         const quantityForSale = (typeof item.quantitySold === 'number' && !isNaN(item.quantitySold)) ? item.quantitySold : 0;
 
         if (quantityForSale <= 0) {
-          continue;
+          continue; 
         }
 
         const currentProductIdValue = item.productId;
+
         if (typeof currentProductIdValue !== 'string' || !currentProductIdValue.trim()) {
             errorMessage = `ID de producto inválido para "${item.productName || 'un artículo'}". La venta no puede continuar.`;
             successfulProcessing = false;
-            break;
+            toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
+            setLoadingProducts(false);
+            return false; 
         }
         const currentProductId = currentProductIdValue.trim();
         const productRef = doc(db, PRODUCTS_COLLECTION, currentProductId);
@@ -373,7 +376,9 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         if (!productSnap.exists()) {
           errorMessage = `Producto "${item.productName}" (ID: ${currentProductId}) no encontrado en el inventario.`;
           successfulProcessing = false;
-          break;
+          toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
+          setLoadingProducts(false);
+          return false;
         }
 
         const currentProductData = productSnap.data();
@@ -384,14 +389,18 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         if (currentQuantity < quantityForSale) {
           errorMessage = `Stock insuficiente para "${item.productName}". Disponible: ${currentQuantity}, Solicitado: ${quantityForSale}.`;
           successfulProcessing = false;
-          break;
+          toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
+          setLoadingProducts(false);
+          return false;
         }
         const newQuantity = currentQuantity - quantityForSale;
 
         if (isNaN(newQuantity)) {
-            errorMessage = `Error de cálculo de cantidad para "${item.productName}". La nueva cantidad sería NaN.`;
+            errorMessage = `Error de cálculo de cantidad para "${item.productName}". La nueva cantidad (${newQuantity}) sería NaN. Stock actual: ${currentQuantity}, Cantidad a vender: ${quantityForSale}.`;
             successfulProcessing = false;
-            break;
+            toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
+            setLoadingProducts(false);
+            return false;
         }
 
         batch.update(productRef, { quantity: Number(newQuantity) });
@@ -402,7 +411,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
           productId: currentProductId,
           productName: item.productName || 'Nombre Desconocido',
           quantitySold: quantityForSale,
-          priceAtSale: priceForSale,
+          priceAtSale: Number(priceForSale),
         };
         if (item.category) {
           soldItem.category = item.category;
@@ -412,58 +421,62 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         }
         saleRecordItems.push(soldItem);
 
-        saleTotalAmount += priceForSale * quantityForSale;
+        saleTotalAmount += Number(priceForSale) * quantityForSale;
         saleTotalItems += quantityForSale;
       }
 
-      if (successfulProcessing) {
-        if (saleRecordItems.length > 0) {
-            await batch.commit();
-
-            const salesData = {
-              saleDate: serverTimestamp(),
-              totalAmount: Number(saleTotalAmount),
-              totalItems: Number(saleTotalItems),
-              itemsSold: saleRecordItems,
-            };
-            await addDoc(collection(db, SALES_COLLECTION), salesData);
-
-            toast({
-              title: "🎉 Compra Exitosa 🎉",
-              description: "El stock de los productos ha sido actualizado y la venta registrada.",
-            });
-            return true;
-        } else {
-            toast({
-                title: "Venta No Procesada",
-                description: "No se seleccionaron artículos válidos o cantidades para la venta.",
-                variant: "default",
-            });
-            return false;
-        }
-      } else {
-        toast({
-          title: "Error en la Venta",
-          description: errorMessage,
-          variant: "destructive",
-        });
+      // This check is technically redundant if early returns are hit, but good for clarity
+      if (!successfulProcessing) {
+        // Error toast would have already been shown by the failing check
+        setLoadingProducts(false);
         return false;
+      }
+
+      if (saleRecordItems.length > 0) {
+          await batch.commit();
+
+          const salesData = {
+            saleDate: serverTimestamp(),
+            totalAmount: Number(saleTotalAmount),
+            totalItems: Number(saleTotalItems),
+            itemsSold: saleRecordItems,
+          };
+          await addDoc(collection(db, SALES_COLLECTION), salesData);
+
+          toast({
+            title: "🎉 Compra Exitosa 🎉",
+            description: "El stock de los productos ha sido actualizado y la venta registrada.",
+          });
+          setLoadingProducts(false);
+          return true;
+      } else {
+          toast({
+              title: "Venta No Procesada",
+              description: "No se seleccionaron artículos válidos o cantidades para la venta.",
+              variant: "default", // Changed from destructive to default as it's not strictly an error
+          });
+          setLoadingProducts(false);
+          return false;
       }
     } catch (error) {
       let firestoreErrorMessage = "Error crítico al procesar la venta.";
+      if (error instanceof Error && error.message) {
+        firestoreErrorMessage += ` Detalle SDK: ${error.message}`;
+      }
       if (error && typeof error === 'object' && 'code' in error) {
-        firestoreErrorMessage += ` Código: ${(error as {code: string}).code}.`;
-      } else if (error instanceof Error) {
-        firestoreErrorMessage += ` Detalle: ${error.message}`;
+        const fbError = error as { code: string; message?: string };
+        firestoreErrorMessage += ` Código Firebase: ${fbError.code}.`;
+        if (fbError.message && !firestoreErrorMessage.includes(fbError.message)) {
+          firestoreErrorMessage += ` Mensaje Firebase: ${fbError.message}`;
+        }
       }
       toast({
         title: "Error Crítico en Venta",
         description: firestoreErrorMessage,
         variant: "destructive",
       });
-      return false;
-    } finally {
       setLoadingProducts(false);
+      return false;
     }
   }, [toast]);
 
