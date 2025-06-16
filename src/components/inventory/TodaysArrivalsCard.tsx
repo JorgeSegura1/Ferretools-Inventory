@@ -28,12 +28,12 @@ export default function TodaysArrivalsCard({ products }: TodaysArrivalsCardProps
   return (
     <Card className="shadow-md mb-8">
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-2">
           <div>
-            <CardTitle className="font-headline text-xl text-primary">Productos que Llegaron Hoy ({products.length})</CardTitle>
+            <CardTitle className="font-headline text-lg sm:text-xl text-primary">Productos que Llegaron Hoy ({products.length})</CardTitle>
             <CardDescription>Productos que llegaron o se agregaron al inventario hoy.</CardDescription>
           </div>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="w-full sm:w-auto">
             <Link href="/inventory/add">
               <PlusCircle className="mr-2 h-4 w-4" />
               Nuevo Producto
@@ -43,44 +43,45 @@ export default function TodaysArrivalsCard({ products }: TodaysArrivalsCardProps
       </CardHeader>
       <CardContent>
         {products.length === 0 ? (
-          <p className="text-muted-foreground py-4">No se han registrado ingresos de productos hoy.</p>
+          <p className="text-muted-foreground py-4 text-center sm:text-left">No se han registrado ingresos de productos hoy.</p>
         ) : (
-          <ScrollArea className="h-[300px] w-full">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[60px]">Imagen</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="text-center">Cantidad</TableHead>
-                  <TableHead className="text-right">Precio</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <Image
-                        src={product.imageUrl}
-                        alt={product.name}
-                        width={40}
-                        height={40}
-                        className="rounded-md object-cover"
-                        data-ai-hint={getProductHint(product.category)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell className="text-center">{product.quantity}</TableCell>
-                    <TableCell className="text-right">
-                      {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
-                    </TableCell>
+          <ScrollArea className="h-auto max-h-[300px] w-full">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px] sm:w-[60px]">Imagen</TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead className="text-center">Cantidad</TableHead>
+                    <TableHead className="text-right">Precio</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          width={40}
+                          height={40}
+                          className="rounded-md object-cover min-w-[40px]"
+                          data-ai-hint={getProductHint(product.category)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">{product.name}</TableCell>
+                      <TableCell className="text-center">{product.quantity}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </ScrollArea>
         )}
       </CardContent>
     </Card>
   );
 }
-

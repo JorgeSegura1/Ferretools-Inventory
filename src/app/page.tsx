@@ -55,13 +55,19 @@ export default function HomePage() {
         const min = Math.min(...prices);
         const max = Math.max(...prices);
         setMinMaxPrice([min, max]);
-        setCurrentPriceRange([min, max]); 
+        // Only set currentPriceRange if it hasn't been touched by user yet
+        // This effect runs multiple times, so we check if it's still at default.
+        if (currentPriceRange[0] === 0 && currentPriceRange[1] === 1000) {
+            setCurrentPriceRange([min, max]);
+        }
       } else {
         setMinMaxPrice([0,1000]);
-        setCurrentPriceRange([0,1000]);
+        if (currentPriceRange[0] === 0 && currentPriceRange[1] === 1000) {
+            setCurrentPriceRange([0,1000]);
+        }
       }
     }
-  }, [products]);
+  }, [products]); // Removed currentPriceRange from deps
 
   const allCategories = useMemo(() => {
     if (loadingProducts) return [];
@@ -126,8 +132,6 @@ export default function HomePage() {
     setSaleItems(prevItems => {
       const existingItem = prevItems.find(item => item.productId === product.id);
       if (existingItem) {
-        // If item already selected, maybe open sheet or show notification? For now, do nothing.
-        // Or remove it: return prevItems.filter(item => item.productId !== product.id);
         return prevItems; 
       }
       if (product.quantity > 0) {
@@ -135,13 +139,13 @@ export default function HomePage() {
           productId: product.id,
           name: product.name,
           imageUrl: product.imageUrl,
-          price: product.price, // This is priceAtSale
+          price: product.price,
           category: product.category,
           quantityToSell: 1,
           maxQuantity: product.quantity,
         }];
       }
-      return prevItems; // Do not add if out of stock
+      return prevItems;
     });
   };
 
@@ -169,10 +173,10 @@ export default function HomePage() {
     const itemsToProcess = saleItems.map(item => ({
       productId: item.productId,
       quantitySold: item.quantityToSell,
-      priceAtSale: item.price, // Pass the price from SaleItem
-      productName: item.name,    // Pass the name from SaleItem
-      category: item.category,   // Pass the category from SaleItem
-      imageUrl: item.imageUrl    // Pass the imageUrl from SaleItem
+      priceAtSale: item.price,
+      productName: item.name,
+      category: item.category,
+      imageUrl: item.imageUrl
     }));
     
     const success = await processSaleAndUpdateStock(itemsToProcess);
@@ -187,11 +191,11 @@ export default function HomePage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <header className="mb-8 text-center">
-        <h1 className="text-4xl font-bold font-headline text-primary">Catálogo de Productos</h1>
-        <p className="text-lg text-muted-foreground mt-2">Encuentra todo lo que necesitas para tus proyectos.</p>
+        <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">Catálogo de Productos</h1>
+        <p className="text-md sm:text-lg text-muted-foreground mt-2">Encuentra todo lo que necesitas para tus proyectos.</p>
       </header>
       
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center gap-4">
         <Input
           type="text"
           placeholder="Buscar productos por nombre, descripción..."
@@ -199,14 +203,14 @@ export default function HomePage() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full"
         />
-        <div className="flex items-center gap-2 justify-self-start md:justify-self-end">
+        <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2 md:justify-end">
           {(searchTerm || selectedCategory || activeAdvancedFiltersCount > 0) && (
-            <Button onClick={resetAllFilters} variant="ghost" className="text-sm">
+            <Button onClick={resetAllFilters} variant="ghost" className="text-sm w-full sm:w-auto justify-start sm:justify-center">
               <XIcon className="mr-2 h-4 w-4" /> Limpiar filtros
             </Button>
           )}
           {role === 'admin' && saleItems.length > 0 && (
-            <Button variant="outline" onClick={() => setIsSaleSheetOpen(true)} size="sm" className="relative">
+            <Button variant="outline" onClick={() => setIsSaleSheetOpen(true)} size="sm" className="relative w-full sm:w-auto">
               <ShoppingCart className="mr-2 h-4 w-4" />
               Revisar Venta
               <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
@@ -217,10 +221,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="mb-8 flex flex-wrap justify-center items-center gap-2 sm:gap-3 px-2">
+      <div className="mb-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center sm:justify-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="text-sm">
+            <Button variant="outline" size="sm" className="text-sm w-full sm:w-auto">
               <ListTree className="mr-2 h-3.5 w-3.5" />
               {selectedCategory || "Categoría"}
             </Button>
@@ -239,14 +243,14 @@ export default function HomePage() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button variant="outline" size="sm" className="text-sm" disabled>
+        <Button variant="outline" size="sm" className="text-sm w-full sm:w-auto" disabled>
           <Tag className="mr-2 h-3.5 w-3.5" />
           Marca
         </Button>
 
         <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="text-sm relative">
+            <Button variant="outline" size="sm" className="text-sm relative w-full sm:w-auto">
               <Filter className="mr-2 h-3.5 w-3.5" />
               Más Filtros
               {activeAdvancedFiltersCount > 0 && (
@@ -275,7 +279,7 @@ export default function HomePage() {
                       if (checked) setShowOutOfStockOnly(false);
                     }}
                   />
-                  <Label htmlFor="inStock">Mostrar solo en stock</Label>
+                  <Label htmlFor="inStock" className="font-normal">Mostrar solo en stock</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
@@ -286,13 +290,13 @@ export default function HomePage() {
                       if (checked) setShowInStockOnly(false);
                     }}
                   />
-                  <Label htmlFor="outOfStock">Mostrar solo agotados</Label>
+                  <Label htmlFor="outOfStock" className="font-normal">Mostrar solo agotados</Label>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <Label htmlFor="priceRange" className="text-base font-semibold">
-                  Rango de Precios: ${currentPriceRange[0]} - ${currentPriceRange[1]}
+                  Rango de Precios: ${currentPriceRange[0].toLocaleString()} - ${currentPriceRange[1].toLocaleString()}
                 </Label>
                 <Slider
                   id="priceRange"
@@ -305,8 +309,8 @@ export default function HomePage() {
                   disabled={products.length === 0 || minMaxPrice[0] === minMaxPrice[1]}
                 />
                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>${minMaxPrice[0]}</span>
-                    <span>${minMaxPrice[1]}</span>
+                    <span>${minMaxPrice[0].toLocaleString()}</span>
+                    <span>${minMaxPrice[1].toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -348,4 +352,3 @@ export default function HomePage() {
     </div>
   );
 }
-

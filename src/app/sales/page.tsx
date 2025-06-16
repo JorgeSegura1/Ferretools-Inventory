@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Renamed to avoid conflict
 
 // Helper to format date for grouping (YYYY-MM-DD for sortability and uniqueness)
 function formatDateForGroupingKey(date: Date): string {
@@ -68,13 +68,9 @@ export default function SalesPage() {
       router.push('/?message=No tienes permisos para acceder a esta página');
       return;
     }
-    // If role is still null but user is loaded, means role determination is pending, wait for authLoading to be false.
     if (user && !role && !authLoading) {
-        // This state might occur briefly if role determination is async after user is set
-        // console.log("User loaded, role not yet determined, waiting for auth to complete role assignment.");
         return; 
     }
-
 
     if (role === 'admin') {
       setLoadingSales(true);
@@ -94,7 +90,6 @@ export default function SalesPage() {
       }, (error) => {
         console.error("Error fetching sales:", error);
         setLoadingSales(false);
-        // Consider adding a toast message for error
       });
       return () => unsubscribe();
     }
@@ -116,7 +111,7 @@ export default function SalesPage() {
       groupedByDay[dateKey].totalItems += sale.totalItems;
       groupedByDay[dateKey].transactions.push(sale);
     });
-    return Object.values(groupedByDay).sort((a, b) => b.dateKey.localeCompare(a.dateKey)); // Sort by date descending
+    return Object.values(groupedByDay).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
   }, [sales]);
 
   if (authLoading || (user && !role && !authLoading) || loadingSales) {
@@ -136,8 +131,8 @@ export default function SalesPage() {
     return (
       <div className="container mx-auto py-12 text-center">
         <DollarSign className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-        <h1 className="text-2xl font-semibold mb-2">Historial de Ventas Vacío</h1>
-        <p className="text-muted-foreground">Aún no se han registrado ventas.</p>
+        <h1 className="text-xl sm:text-2xl font-semibold mb-2">Historial de Ventas Vacío</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">Aún no se han registrado ventas.</p>
       </div>
     );
   }
@@ -146,10 +141,10 @@ export default function SalesPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold font-headline text-primary flex items-center">
-            <DollarSign className="mr-3 h-8 w-8" /> Historial de Ventas
+          <CardTitle className="text-2xl sm:text-3xl font-bold font-headline text-primary flex items-center">
+            <DollarSign className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8" /> Historial de Ventas
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm sm:text-base">
             Revisa las ventas realizadas, agrupadas por día.
           </CardDescription>
         </CardHeader>
@@ -157,49 +152,49 @@ export default function SalesPage() {
           <Accordion type="multiple" className="w-full">
             {dailySummaries.map((summary) => (
               <AccordionItem value={summary.dateKey} key={summary.dateKey}>
-                <AccordionTrigger className="text-lg hover:no-underline">
-                  <div className="flex justify-between items-center w-full pr-2">
-                    <span className="font-semibold">{formatDisplayDate(summary.dateKey)}</span>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="secondary" className="text-sm">
+                <AccordionTrigger className="text-md sm:text-lg hover:no-underline py-3 sm:py-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full pr-2 gap-1 sm:gap-2">
+                    <span className="font-semibold text-left">{formatDisplayDate(summary.dateKey)}</span>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <Badge variant="secondary" className="text-xs sm:text-sm">
                         Total Día: {summary.totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
                       </Badge>
-                      <Badge variant="outline" className="text-sm">{summary.totalItems} artículos</Badge>
+                      <Badge variant="outline" className="text-xs sm:text-sm">{summary.totalItems} artículos</Badge>
                     </div>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <ScrollArea className="h-auto max-h-[600px] pr-4">
+                  <ScrollArea className="h-auto max-h-[600px] pr-2 sm:pr-4">
                     <div className="space-y-3 pt-2">
                       {summary.transactions.map(transaction => (
                         <Card key={transaction.id} className="bg-muted/30">
-                          <CardHeader className="pb-2 pt-3 px-4">
-                            <div className="flex justify-between items-center">
-                                <CardTitle className="text-md font-medium">
+                          <CardHeader className="pb-2 pt-3 px-3 sm:px-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-2">
+                                <CardTitle className="text-sm sm:text-md font-medium">
                                     Venta ID: <span className="font-mono text-xs">{transaction.id.substring(0,8)}...</span>
                                 </CardTitle>
-                                <Badge variant="default">
+                                <Badge variant="default" className="text-xs sm:text-sm self-start sm:self-center">
                                     {transaction.totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })} ({transaction.totalItems} art.)
                                 </Badge>
                             </div>
-                            <CardDescription className="text-xs">
+                            <CardDescription className="text-xs mt-0.5 sm:mt-0">
                                 Realizada el: {transaction.saleDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                             </CardDescription>
                           </CardHeader>
-                          <CardContent className="px-4 pb-3">
-                            <p className="text-sm font-medium mb-1">Artículos en esta venta:</p>
+                          <CardContent className="px-3 sm:px-4 pb-3">
+                            <p className="text-sm font-medium mb-1 mt-1">Artículos en esta venta:</p>
                             <ul className="space-y-1.5 text-xs list-disc list-inside pl-1">
                               {transaction.itemsSold.map(item => (
-                                <li key={item.productId} className="flex items-center justify-between">
+                                <li key={item.productId} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-0.5 sm:gap-2">
                                   <div className="flex items-center">
                                     {item.imageUrl && !item.imageUrl.startsWith('data:image') ? (
-                                        <Image src={item.imageUrl} alt={item.productName} width={24} height={24} className="rounded-sm object-cover mr-2" data-ai-hint={getProductHint(item.category)} />
+                                        <NextImage src={item.imageUrl} alt={item.productName} width={24} height={24} className="rounded-sm object-cover mr-2 hidden sm:block" data-ai-hint={getProductHint(item.category)} />
                                     ) : (
-                                        <ImageIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                                        <ImageIcon className="h-4 w-4 mr-2 text-muted-foreground hidden sm:block" />
                                     )}
                                     <span>{item.productName} (x{item.quantitySold})</span>
                                   </div>
-                                  <span>
+                                  <span className="sm:ml-auto">
                                     {item.priceAtSale.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })} c/u
                                   </span>
                                 </li>
@@ -219,4 +214,3 @@ export default function SalesPage() {
     </div>
   );
 }
-

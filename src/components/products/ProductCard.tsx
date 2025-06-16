@@ -36,7 +36,7 @@ export default function ProductCard({
   const productIsSelectedForSale = isProductInSale ? isProductInSale(product.id) : false;
 
   const handleSelectClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click event if any
+    e.stopPropagation(); 
     if (onSelectForSale && product.quantity > 0 && !productIsSelectedForSale) {
       onSelectForSale(product);
     }
@@ -62,34 +62,32 @@ export default function ProductCard({
           />
           {isOutOfStock && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <Badge variant="destructive" className="text-lg px-4 py-2 transform rotate-[-15deg] font-bold">
+              <Badge variant="destructive" className="text-md sm:text-lg px-3 sm:px-4 py-1 sm:py-2 transform rotate-[-15deg] font-bold">
                 AGOTADO
               </Badge>
             </div>
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-4 flex-grow">
-        <CardTitle className="text-lg font-headline mb-1 line-clamp-2 min-h-[2.5em]">{product.name}</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground mb-2 line-clamp-3 min-h-[3.75em]">
-          {product.description}
-        </CardDescription>
-        <p className="text-lg font-semibold text-primary mb-1">
-          {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      <CardContent className="p-3 sm:p-4 flex-grow">
+        <CardTitle className="text-base sm:text-lg font-headline mb-1 line-clamp-2 min-h-[calc(2*1.5rem*1.2)] sm:min-h-[calc(2*1.75rem*1.2)]">{/* approx 2 lines based on line-height */}</CardTitle>
+        <CardDescription className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-3 min-h-[calc(3*1.25rem*1.4)] sm:min-h-[calc(3*1.4rem*1.4)]">{/* approx 3 lines */}</CardDescription>
+        <p className="text-md sm:text-lg font-semibold text-primary mb-1">
+          {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
         </p>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-between items-center">
-        <Badge variant={isOutOfStock ? 'secondary' : 'default'} className={cn(isOutOfStock ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
+      <CardFooter className="p-3 sm:p-4 pt-0 flex flex-col sm:flex-row sm:justify-between items-stretch sm:items-center gap-2">
+        <Badge variant={isOutOfStock ? 'secondary' : 'default'} className={cn("text-xs text-center sm:text-left", isOutOfStock ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
           {isOutOfStock ? 'No disponible' : `Disponible: ${product.quantity}`}
         </Badge>
         {role === 'admin' && !isOutOfStock && onSelectForSale && onRemoveFromSale && isProductInSale && (
-          <div>
+          <div className="w-full sm:w-auto">
             {productIsSelectedForSale ? (
-              <Button variant="outline" size="sm" onClick={handleRemoveClick} className="text-xs">
+              <Button variant="outline" size="sm" onClick={handleRemoveClick} className="text-xs w-full">
                 <MinusCircle className="mr-1 h-3.5 w-3.5" /> Quitar
               </Button>
             ) : (
-              <Button variant="default" size="sm" onClick={handleSelectClick} className="text-xs">
+              <Button variant="default" size="sm" onClick={handleSelectClick} className="text-xs w-full">
                 <PlusCircle className="mr-1 h-3.5 w-3.5" /> Vender
               </Button>
             )}

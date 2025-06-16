@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Loader2, PackageSearch, CalendarDays } from 'lucide-react';
 import type { Product } from '@/types';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Renamed to avoid conflict with Lucide icon
 import {
   Accordion,
   AccordionContent,
@@ -56,7 +56,7 @@ export default function InventoryHistoryPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (authLoading) return; // Wait for auth to load
+    if (authLoading) return; 
 
     if (!user) {
       router.push('/login?message=Debes iniciar sesión para ver el historial');
@@ -71,7 +71,7 @@ export default function InventoryHistoryPage() {
     const sortedProducts = [...products].sort((a, b) => {
       const dateA = a.arrivalDate?.getTime() || 0;
       const dateB = b.arrivalDate?.getTime() || 0;
-      return dateB - dateA;
+      return dateB - dateA; // Sort by date descending
     });
 
     return sortedProducts.reduce((acc, product) => {
@@ -85,7 +85,7 @@ export default function InventoryHistoryPage() {
   }, [products, loadingProducts]);
 
   const sortedDateKeys = useMemo(() => {
-    return Object.keys(groupedAndSortedProducts);
+    return Object.keys(groupedAndSortedProducts).sort((a,b) => b.localeCompare(a)); // Ensure dates are sorted, most recent first
   }, [groupedAndSortedProducts]);
 
 
@@ -99,16 +99,15 @@ export default function InventoryHistoryPage() {
   }
   
   if (!user || role !== 'admin') {
-    // This state should ideally be handled by the redirect, but as a fallback.
     return <div className="container mx-auto py-8 text-center">No tienes permisos para ver esta página. Redirigiendo...</div>;
   }
 
   if (sortedDateKeys.length === 0) {
     return (
       <div className="container mx-auto py-12 text-center">
-        <PackageSearch className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-        <h1 className="text-2xl font-semibold mb-2">Historial de Productos Vacío</h1>
-        <p className="text-muted-foreground">Aún no se han registrado ingresos de productos.</p>
+        <PackageSearch className="h-12 w-12 sm:h-16 sm:w-16 mx-auto text-muted-foreground mb-4" />
+        <h1 className="text-xl sm:text-2xl font-semibold mb-2">Historial de Productos Vacío</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">Aún no se han registrado ingresos de productos.</p>
       </div>
     );
   }
@@ -117,10 +116,10 @@ export default function InventoryHistoryPage() {
     <div className="container mx-auto py-8">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold font-headline text-primary flex items-center">
-            <CalendarDays className="mr-3 h-8 w-8" /> Historial de Productos
+          <CardTitle className="text-2xl sm:text-3xl font-bold font-headline text-primary flex items-center">
+            <CalendarDays className="mr-2 sm:mr-3 h-7 w-7 sm:h-8 sm:w-8" /> Historial de Productos
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm sm:text-base">
             Revisa los productos que han llegado a la ferretería, agrupados por fecha de ingreso.
           </CardDescription>
         </CardHeader>
@@ -128,30 +127,31 @@ export default function InventoryHistoryPage() {
           <Accordion type="single" collapsible className="w-full">
             {sortedDateKeys.map((dateKey) => (
               <AccordionItem value={dateKey} key={dateKey}>
-                <AccordionTrigger className="text-lg hover:no-underline">
-                  <div className="flex justify-between items-center w-full pr-2">
-                    <span>{formatDisplayDate(dateKey)}</span>
-                    <Badge variant="outline">{groupedAndSortedProducts[dateKey].length} artículos</Badge>
+                <AccordionTrigger className="text-md sm:text-lg hover:no-underline py-3 sm:py-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full pr-2 gap-1 sm:gap-2">
+                    <span className="font-semibold text-left">{formatDisplayDate(dateKey)}</span>
+                    <Badge variant="outline" className="text-xs sm:text-sm">{groupedAndSortedProducts[dateKey].length} artículos</Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <ScrollArea className="h-[400px] pr-4">
-                    <ul className="space-y-4 pt-2">
+                  <ScrollArea className="h-[400px] pr-2 sm:pr-4">
+                    <ul className="space-y-3 sm:space-y-4 pt-2">
                       {groupedAndSortedProducts[dateKey].map((product) => (
-                        <li key={product.id} className="flex items-start p-3 border rounded-lg shadow-sm hover:bg-muted/50 transition-colors">
-                          <Image
+                        <li key={product.id} className="flex flex-col xs:flex-row items-start xs:items-center p-2 sm:p-3 border rounded-lg shadow-sm hover:bg-muted/50 transition-colors gap-2 xs:gap-3">
+                          <NextImage
                             src={product.imageUrl}
                             alt={product.name}
-                            width={60}
-                            height={60}
-                            className="rounded-md object-cover mr-4 mt-1"
+                            width={50}
+                            height={50}
+                            className="rounded-md object-cover min-w-[50px] xs:mr-2 xs:mt-1"
                             data-ai-hint={getProductHint(product.category)}
                           />
                           <div className="flex-grow">
-                            <h4 className="font-semibold text-md">{product.name}</h4>
-                            <div className="text-sm text-muted-foreground">
-                              {product.category && <Badge variant="secondary" className="mr-2">{product.category}</Badge>}
-                              Cantidad: {product.quantity} | Precio: {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
+                            <h4 className="font-semibold text-sm sm:text-base">{product.name}</h4>
+                            <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap gap-x-2 gap-y-1 items-center mt-0.5">
+                              {product.category && <Badge variant="secondary" className="text-xs">{product.category}</Badge>}
+                              <span>Cantidad: {product.quantity}</span>
+                              <span>Precio: {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</span>
                             </div>
                           </div>
                         </li>

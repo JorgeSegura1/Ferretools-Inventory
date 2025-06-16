@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import EditProductDialog from './EditProductDialog'; // Changed from EditQuantityDialog
+import EditProductDialog from './EditProductDialog';
 import DeleteProductDialog from './DeleteProductDialog';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,7 +51,7 @@ export default function InventoryTable({ products }: InventoryTableProps) {
   const inventoryContent = (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">Gestión de Inventario</CardTitle>
+        <CardTitle className="font-headline text-xl sm:text-2xl">Gestión de Inventario</CardTitle>
         <CardDescription>Visualiza y actualiza las cantidades y detalles de tus productos.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -59,11 +59,11 @@ export default function InventoryTable({ products }: InventoryTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[80px]">Imagen</TableHead>
+                <TableHead className="w-[60px] sm:w-[80px]">Imagen</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Precio</TableHead>
                 <TableHead className="text-center">Cantidad</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className="text-right min-w-[180px]">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -75,19 +75,19 @@ export default function InventoryTable({ products }: InventoryTableProps) {
                       alt={product.name}
                       width={50}
                       height={50}
-                      className="rounded-md object-cover"
+                      className="rounded-md object-cover min-w-[50px]"
                       data-ai-hint={getProductHint(product.category)}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="font-medium whitespace-nowrap">{product.name}</TableCell>
+                  <TableCell className="whitespace-nowrap">{product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant={product.quantity === 0 ? 'destructive' : 'outline'}>
                       {product.quantity}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <EditProductDialog product={product} /> {/* Changed from EditQuantityDialog */}
+                    <EditProductDialog product={product} />
                     <DeleteProductDialog product={product} onConfirmDelete={() => deleteProduct(product.id)} />
                   </TableCell>
                 </TableRow>

@@ -55,18 +55,18 @@ export default function SaleReviewSheet({
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle className="text-2xl font-headline">Revisar Venta</SheetTitle>
+          <SheetTitle className="text-xl sm:text-2xl font-headline">Revisar Venta</SheetTitle>
           <SheetDescription>
             Ajusta las cantidades y confirma la venta para actualizar el stock.
           </SheetDescription>
         </SheetHeader>
 
         {items.length === 0 ? (
-          <div className="flex-grow flex flex-col items-center justify-center text-center">
-            <Trash2 className="h-16 w-16 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No has seleccionado productos para la venta.</p>
+          <div className="flex-grow flex flex-col items-center justify-center text-center p-4">
+            <Trash2 className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-sm sm:text-base">No has seleccionado productos para la venta.</p>
             <SheetClose asChild>
-              <Button variant="outline" className="mt-4">Volver al Catálogo</Button>
+              <Button variant="outline" className="mt-4 w-full sm:w-auto">Volver al Catálogo</Button>
             </SheetClose>
           </div>
         ) : (
@@ -74,29 +74,29 @@ export default function SaleReviewSheet({
             <ScrollArea className="flex-grow my-4 pr-3">
               <div className="space-y-4">
                 {items.map((item) => (
-                  <div key={item.productId} className="flex items-center gap-4 p-3 border rounded-lg">
+                  <div key={item.productId} className="flex items-center gap-3 sm:gap-4 p-3 border rounded-lg">
                     <Image
                       src={item.imageUrl}
                       alt={item.name}
                       width={60}
                       height={60}
-                      className="rounded-md object-cover"
+                      className="rounded-md object-cover min-w-[60px]"
                       data-ai-hint={getProductHint(item.category)}
                     />
                     <div className="flex-grow">
-                      <h4 className="font-semibold text-md">{item.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Precio: {item.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP' })}
+                      <h4 className="font-semibold text-sm sm:text-md">{item.name}</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Precio: {item.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1 sm:gap-2 mt-1">
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7"
+                          className="h-6 w-6 sm:h-7 sm:w-7"
                           onClick={() => onUpdateQuantity(item.productId, item.quantityToSell - 1)}
                           disabled={item.quantityToSell <= 1 || isProcessingSale}
                         >
-                          <Minus className="h-4 w-4" />
+                          <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
                         <Input
                           type="number"
@@ -105,7 +105,7 @@ export default function SaleReviewSheet({
                             const val = parseInt(e.target.value, 10);
                             onUpdateQuantity(item.productId, isNaN(val) ? 1 : val);
                           }}
-                          className="h-7 w-12 text-center px-1"
+                          className="h-6 w-10 sm:h-7 sm:w-12 text-center px-1 text-sm"
                           min="1"
                           max={item.maxQuantity}
                           disabled={isProcessingSale}
@@ -113,11 +113,11 @@ export default function SaleReviewSheet({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7"
+                          className="h-6 w-6 sm:h-7 sm:w-7"
                           onClick={() => onUpdateQuantity(item.productId, item.quantityToSell + 1)}
                           disabled={item.quantityToSell >= item.maxQuantity || isProcessingSale}
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
                         <span className="text-xs text-muted-foreground ml-1">(Máx: {item.maxQuantity})</span>
                       </div>
@@ -125,7 +125,7 @@ export default function SaleReviewSheet({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive hover:text-destructive/80"
+                      className="text-destructive hover:text-destructive/80 h-7 w-7 sm:h-8 sm:w-8"
                       onClick={() => onRemoveItem(item.productId)}
                       disabled={isProcessingSale}
                     >
@@ -138,15 +138,15 @@ export default function SaleReviewSheet({
 
             <SheetFooter className="mt-auto border-t pt-4">
               <div className="w-full">
-                <div className="flex justify-between items-center mb-2 text-lg font-semibold">
+                <div className="flex justify-between items-center mb-2 text-md sm:text-lg font-semibold">
                   <span>Total Productos:</span>
                   <span>{totalItems}</span>
                 </div>
-                <div className="flex justify-between items-center mb-4 text-xl font-bold text-primary">
+                <div className="flex justify-between items-center mb-4 text-lg sm:text-xl font-bold text-primary">
                   <span>Monto Total:</span>
-                  <span>{totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP' })}</span>
+                  <span>{totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0})}</span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                     <SheetClose asChild>
                         <Button variant="outline" className="w-full" disabled={isProcessingSale}>Cancelar</Button>
                     </SheetClose>
@@ -166,4 +166,3 @@ export default function SaleReviewSheet({
     </Sheet>
   );
 }
-

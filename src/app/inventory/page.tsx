@@ -55,10 +55,10 @@ export default function InventoryPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold font-headline text-primary">Gestión de Inventario</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0">
+        <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Gestión de Inventario</h1>
         {role === 'admin' && (
-          <Button asChild>
+          <Button asChild className="w-full sm:w-auto">
             <Link href="/inventory/add">
               <PlusCircle className="mr-2 h-4 w-4" /> Agregar Nuevo Artículo
             </Link>
@@ -67,7 +67,7 @@ export default function InventoryPage() {
       </div>
       
       <TodaysArrivalsCard products={todaysArrivals} />
-      <h2 className="text-2xl font-bold font-headline text-primary mb-4 mt-8">Inventario General</h2>
+      <h2 className="text-xl sm:text-2xl font-bold font-headline text-primary mb-4 mt-8">Inventario General</h2>
       <InventoryTable products={products} />
     </div>
   );

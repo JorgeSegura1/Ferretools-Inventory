@@ -35,7 +35,7 @@ export default function AddItemForm() {
   const { addProduct } = useProducts();
   const { toast } = useToast();
   const router = useRouter();
-  const [isProcessing, setIsProcessing] = useState(false); // Combined loading state
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -69,7 +69,7 @@ export default function AddItemForm() {
         });
 
         if (generatedImageOutput && generatedImageOutput.imageDataUri) {
-          finalImageUrl = generatedImageOutput.imageDataUri; // This will be a Base64 string
+          finalImageUrl = generatedImageOutput.imageDataUri;
           toast({
             title: "Imagen Generada por IA",
             description: "La imagen está lista para ser procesada y guardada.",
@@ -98,20 +98,17 @@ export default function AddItemForm() {
     
     const { generateImage, ...productDetails } = data;
 
-    const newProductData: Omit<Product, 'id' | 'userId'> = {
+    const newProductData: Omit<Product, 'id' | 'userId' | 'arrivalDate'> = {
         ...productDetails,
-        imageUrl: finalImageUrl, // Pass the Base64 or placeholder to addProduct
+        imageUrl: finalImageUrl,
     };
 
     try {
-      await addProduct(newProductData); // addProduct now handles Storage upload if imageUrl is Base64
-      // Success toast is handled by addProduct
+      await addProduct(newProductData);
       reset();
       router.push('/inventory');
     } catch (error) {
-      // Error toast is handled by addProduct
       console.error("Failed to add product from form:", error);
-      // Optionally, specific UI feedback if addProduct throws an error not caught by its own toasts
     } finally {
       setIsProcessing(false);
     }
@@ -120,11 +117,11 @@ export default function AddItemForm() {
   return (
     <Card className="max-w-2xl mx-auto shadow-lg">
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">Agregar Nuevo Artículo al Inventario</CardTitle>
-        <CardDescription>Completa los detalles del nuevo producto.</CardDescription>
+        <CardTitle className="font-headline text-xl sm:text-2xl">Agregar Nuevo Artículo al Inventario</CardTitle>
+        <CardDescription className="text-sm sm:text-base">Completa los detalles del nuevo producto.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
           <div>
             <Label htmlFor="name">Nombre del Artículo</Label>
             <Input id="name" {...register('name')} disabled={isProcessing} />
@@ -137,7 +134,7 @@ export default function AddItemForm() {
             {errors.description && <p className="text-sm text-destructive mt-1">{errors.description.message}</p>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <Label htmlFor="price">Precio ($)</Label>
               <Input id="price" type="number" step="0.01" {...register('price')} disabled={isProcessing} />
@@ -170,12 +167,12 @@ export default function AddItemForm() {
                 const isChecked = !!checked;
                 setValue("generateImage", isChecked, { shouldValidate: true });
                 if (isChecked) {
-                  setValue("imageUrl", "", { shouldValidate: true }); // Clear manual URL if AI is chosen
+                  setValue("imageUrl", "", { shouldValidate: true });
                 }
               }}
               disabled={!!watchImageUrl || isProcessing}
             />
-            <Label htmlFor="generateImage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            <Label htmlFor="generateImage" className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
               Generar imagen con IA si la URL está vacía
             </Label>
           </div>
@@ -188,11 +185,11 @@ export default function AddItemForm() {
             {errors.category && <p className="text-sm text-destructive mt-1">{errors.category.message}</p>}
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isProcessing}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3 pt-4">
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isProcessing} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isProcessing}>
+            <Button type="submit" disabled={isProcessing} className="w-full sm:w-auto">
               {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Agregar Artículo"}
             </Button>
           </div>
