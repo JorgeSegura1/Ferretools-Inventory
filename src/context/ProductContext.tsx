@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Product, SaleItem } from '@/types';
+import type { Product, SaleItem, SaleRecord, SoldItemDetails } from '@/types';
 import { db, storage } from '@/lib/firebase';
 import { 
   collection, 
@@ -41,7 +41,7 @@ interface ProductContextType {
   updateProductQuantity: (productId: string, newQuantity: number) => Promise<void>; 
   updateProductDetails: (productId: string, data: ProductDetailsUpdateData) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
-  processSaleAndUpdateStock: (itemsToSell: Array<{ productId: string; quantitySold: number }>) => Promise<boolean>;
+  processSaleAndUpdateStock: (itemsToSell: SaleItem[]) => Promise<boolean>; // Changed to accept SaleItem[]
   getProductById: (productId: string) => Product | undefined;
   loadingProducts: boolean;
 }
@@ -49,6 +49,7 @@ interface ProductContextType {
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 const PRODUCTS_COLLECTION = 'products';
+const SALES_COLLECTION = 'sales';
 
 function dataURItoBlob(dataURI: string): Blob {
   if (!dataURI.includes(',')) {
@@ -318,15 +319,19 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [toast]);
 
-  const processSaleAndUpdateStock = useCallback(async (itemsToSell: Array<{ productId: string; quantitySold: number }>): Promise<boolean> => {
+  const processSaleAndUpdateStock = useCallback(async (itemsToSell: SaleItem[]): Promise<boolean> => {
     setLoadingProducts(true);
     const batch = writeBatch(db);
     let successful = true;
     let errorMessage = "No se pudo completar la venta.";
 
+    const saleRecordItems: SoldItemDetails[] = [];
+    let saleTotalAmount = 0;
+    let saleTotalItems = 0;
+
     try {
       for (const item of itemsToSell) {
-        if (item.quantitySold <= 0) continue; 
+        if (item.quantityToSell <= 0) continue; 
 
         const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
         const productSnap = await getDoc(productRef);
@@ -338,20 +343,44 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         }
 
         const currentProduct = productSnap.data() as Product;
-        if (currentProduct.quantity < item.quantitySold) {
-          errorMessage = `Stock insuficiente para "${currentProduct.name}". Disponible: ${currentProduct.quantity}, Solicitado: ${item.quantitySold}.`;
+        if (currentProduct.quantity < item.quantityToSell) {
+          errorMessage = `Stock insuficiente para "${currentProduct.name}". Disponible: ${currentProduct.quantity}, Solicitado: ${item.quantityToSell}.`;
           successful = false;
           break;
         }
-        const newQuantity = currentProduct.quantity - item.quantitySold;
+        const newQuantity = currentProduct.quantity - item.quantityToSell;
         batch.update(productRef, { quantity: newQuantity });
+
+        // Prepare item for sale record
+        saleRecordItems.push({
+          productId: item.productId,
+          productName: item.name, // Name at the time of sale
+          quantitySold: item.quantityToSell,
+          priceAtSale: item.price, // Price per unit at the time of sale
+          category: item.category,
+          imageUrl: item.imageUrl // Image at the time of sale
+        });
+        saleTotalAmount += item.price * item.quantityToSell;
+        saleTotalItems += item.quantityToSell;
       }
 
       if (successful) {
+        // All stock checks passed, commit product updates
         await batch.commit();
+
+        // Now, record the sale
+        if (saleRecordItems.length > 0) {
+          await addDoc(collection(db, SALES_COLLECTION), {
+            saleDate: serverTimestamp(),
+            totalAmount: saleTotalAmount,
+            totalItems: saleTotalItems,
+            itemsSold: saleRecordItems,
+          });
+        }
+        
         toast({
           title: "🎉 Compra Exitosa 🎉",
-          description: "El stock de los productos ha sido actualizado.",
+          description: "El stock de los productos ha sido actualizado y la venta registrada.",
         });
         return true;
       } else {

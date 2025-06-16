@@ -20,3 +20,22 @@ export type SaleItem = {
   quantityToSell: number;
   maxQuantity: number; // Original stock quantity when added to sale list
 };
+
+// For storing in Firestore sale records
+export interface SoldItemDetails {
+  productId: string;
+  productName: string; // Name at the time of sale
+  quantitySold: number;
+  priceAtSale: number; // Price per unit at the time of sale
+  category?: string;
+  imageUrl?: string; // Optional: if you want to display image in sales history details
+}
+
+export interface SaleRecord {
+  id: string; // Firestore document ID
+  saleDate: Date; // Converted from Firestore Timestamp in the app
+  totalAmount: number; // Total for this specific sale transaction
+  totalItems: number; // Total items in this specific sale transaction
+  itemsSold: SoldItemDetails[];
+  // userId?: string; // Optional: who made the sale if needed (could be Firebase auth user ID)
+}

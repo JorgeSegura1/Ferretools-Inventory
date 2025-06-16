@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, ListChecks, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, Bell, History } from 'lucide-react';
+import { LayoutGrid, ListChecks, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, Bell, History, DollarSign } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -28,6 +28,7 @@ const baseNavItems = [
   { href: '/inventory', label: 'Inventario', icon: Warehouse, requiresAuth: true, requiredRole: 'admin' },
   { href: '/inventory/add', label: 'Agregar Artículo', icon: PlusCircle, requiresAuth: true, requiredRole: 'admin' },
   { href: '/inventory/history', label: 'Historial de Productos', icon: History, requiresAuth: true, requiredRole: 'admin' },
+  { href: '/sales', label: 'Ventas', icon: DollarSign, requiresAuth: true, requiredRole: 'admin' },
 ];
 
 const authNavItems = [
