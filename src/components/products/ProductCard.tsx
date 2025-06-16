@@ -70,8 +70,12 @@ export default function ProductCard({
         </div>
       </CardHeader>
       <CardContent className="p-3 sm:p-4 flex-grow">
-        <CardTitle className="text-base sm:text-lg font-headline mb-1 line-clamp-2 min-h-[calc(2*1.5rem*1.2)] sm:min-h-[calc(2*1.75rem*1.2)]">{/* approx 2 lines based on line-height */}</CardTitle>
-        <CardDescription className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-3 min-h-[calc(3*1.25rem*1.4)] sm:min-h-[calc(3*1.4rem*1.4)]">{/* approx 3 lines */}</CardDescription>
+        <CardTitle className="text-base sm:text-lg font-headline mb-1 line-clamp-2 min-h-[calc(2*1.5rem*1.2)] sm:min-h-[calc(2*1.75rem*1.2)]">
+          {product.name}
+        </CardTitle>
+        <CardDescription className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-3 min-h-[calc(3*1.25rem*1.4)] sm:min-h-[calc(3*1.4rem*1.4)]">
+          {product.description}
+        </CardDescription>
         <p className="text-md sm:text-lg font-semibold text-primary mb-1">
           {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
         </p>
