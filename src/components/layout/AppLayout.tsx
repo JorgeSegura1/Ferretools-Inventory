@@ -115,86 +115,90 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
 
   return (
-    <SidebarProvider defaultOpen>
-      <SiteHeader />
-      <Sidebar collapsible="icon" className="border-r">
-        <SidebarHeader className="p-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Wrench className="h-8 w-8 text-primary" />
-            <h1 className="text-xl font-bold font-headline group-data-[collapsible=icon]:hidden">
-              Ferretools
-            </h1>
-          </Link>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            {allNavItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <Link href={item.href}>
-                  <SidebarMenuButton
-                    isActive={pathname === item.href}
-                    tooltip={{ children: item.label, className: "font-body"}}
-                    className="font-body"
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-        <SidebarFooter className="p-2 mt-auto border-t">
-          {user && !loading && (
-            <div className="flex flex-col gap-2 items-start group-data-[collapsible=icon]:items-center">
-               <div className="flex items-center gap-2 p-2 w-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
-                  <AvatarFallback>{user.email?.[0].toUpperCase() || 'U'}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                  <span className="text-sm font-medium truncate max-w-[120px]">{user.displayName || user.email}</span>
+    <SidebarProvider defaultOpen className="flex-col md:flex-row">
+      <SiteHeader /> {/* This will be the first item in the flex column on mobile */}
+      
+      {/* This div wrapper ensures Sidebar and SidebarInset are laid out as a row */}
+      <div className="flex flex-1 w-full"> 
+        <Sidebar collapsible="icon" className="border-r">
+          <SidebarHeader className="p-4">
+            <Link href="/" className="flex items-center gap-2">
+              <Wrench className="h-8 w-8 text-primary" />
+              <h1 className="text-xl font-bold font-headline group-data-[collapsible=icon]:hidden">
+                Ferretools
+              </h1>
+            </Link>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarMenu>
+              {allNavItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <Link href={item.href}>
+                    <SidebarMenuButton
+                      isActive={pathname === item.href}
+                      tooltip={{ children: item.label, className: "font-body"}}
+                      className="font-body"
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="p-2 mt-auto border-t">
+            {user && !loading && (
+              <div className="flex flex-col gap-2 items-start group-data-[collapsible=icon]:items-center">
+                 <div className="flex items-center gap-2 p-2 w-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
+                    <AvatarFallback>{user.email?.[0].toUpperCase() || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+                    <span className="text-sm font-medium truncate max-w-[120px]">{user.displayName || user.email}</span>
+                  </div>
                 </div>
+                <SidebarMenuButton
+                  tooltip={{ children: "Notificaciones", className: "font-body"}}
+                  className="font-body w-full group-data-[collapsible=expanded]:hidden" 
+                  aria-label="Notifications"
+                >
+                  <Bell className="h-5 w-5" />
+                  <span className="group-data-[collapsible=icon]:hidden">Notificaciones</span>
+                </SidebarMenuButton>
+                <SidebarMenuButton
+                  onClick={handleSignOut}
+                  tooltip={{ children: "Cerrar Sesión", className: "font-body"}}
+                  className="font-body w-full"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
+                </SidebarMenuButton>
               </div>
-              <SidebarMenuButton
-                tooltip={{ children: "Notificaciones", className: "font-body"}}
-                className="font-body w-full group-data-[collapsible=expanded]:hidden" 
-                aria-label="Notifications"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="group-data-[collapsible=icon]:hidden">Notificaciones</span>
-              </SidebarMenuButton>
-              <SidebarMenuButton
-                onClick={handleSignOut}
-                tooltip={{ children: "Cerrar Sesión", className: "font-body"}}
-                className="font-body w-full"
-              >
-                <LogOut className="h-5 w-5" />
-                <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
-              </SidebarMenuButton>
-            </div>
-          )}
-          {(!user && !loading) && (
-             <SidebarMenuItem>
-                <Link href="/login">
-                  <SidebarMenuButton
-                    isActive={pathname === "/login"}
-                    tooltip={{ children: "Iniciar Sesión", className: "font-body"}}
-                    className="font-body w-full"
-                  >
-                    <LogIn className="h-5 w-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">Iniciar Sesión</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-          )}
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset className="ml-0 md:ml-64"> {/* Changed this line */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
-          {children}
-        </main>
-      </SidebarInset>
+            )}
+            {(!user && !loading) && (
+               <SidebarMenuItem>
+                  <Link href="/login">
+                    <SidebarMenuButton
+                      isActive={pathname === "/login"}
+                      tooltip={{ children: "Iniciar Sesión", className: "font-body"}}
+                      className="font-body w-full"
+                    >
+                      <LogIn className="h-5 w-5" />
+                      <span className="group-data-[collapsible=icon]:hidden">Iniciar Sesión</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+            )}
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset className="ml-0 md:ml-64"> 
+          <main className="flex-1 p-4 md:p-6 lg:p-8">
+            {children}
+          </main>
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
