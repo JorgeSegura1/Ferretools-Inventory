@@ -340,12 +340,12 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
  const processSaleAndUpdateStock = useCallback(async (
-    itemsToSell: Array<Omit<SaleItem, 'maxQuantity'> & { priceAtSale: number, productName: string }>
+    itemsToSell: Array<Omit<SaleItem, 'maxQuantity'> & { priceAtSale: number, productName: string, quantitySold: number, category?: string, imageUrl?: string }>
   ): Promise<boolean> => {
     setLoadingProducts(true);
     const batch = writeBatch(db);
-    let successful = true;
-    let errorMessage = "No se pudo completar la venta.";
+    let successfulProcessing = true;
+    let errorMessage = "No se pudo completar la venta debido a un error desconocido.";
 
     const saleRecordItems: SoldItemDetails[] = [];
     let saleTotalAmount = 0;
@@ -353,15 +353,19 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       for (const item of itemsToSell) {
-        const quantityForSale = (typeof item.quantityToSell === 'number' && !isNaN(item.quantityToSell)) ? item.quantityToSell : 0;
-        if (quantityForSale <= 0) continue; 
+        const quantityForSale = (typeof item.quantitySold === 'number' && !isNaN(item.quantitySold)) ? item.quantitySold : 0;
+        
+        if (quantityForSale <= 0) {
+           // This item will be skipped, not an error for the whole sale unless all items are like this
+          continue; 
+        }
 
         const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
         const productSnap = await getDoc(productRef);
 
         if (!productSnap.exists()) {
-          errorMessage = `Producto con ID ${item.productId} no encontrado.`;
-          successful = false;
+          errorMessage = `Producto "${item.productName}" (ID: ${item.productId}) no encontrado en el inventario.`;
+          successfulProcessing = false;
           break;
         }
 
@@ -372,7 +376,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
 
         if (currentQuantity < quantityForSale) {
           errorMessage = `Stock insuficiente para "${item.productName}". Disponible: ${currentQuantity}, Solicitado: ${quantityForSale}.`;
-          successful = false;
+          successfulProcessing = false;
           break;
         }
         const newQuantity = currentQuantity - quantityForSale;
@@ -382,11 +386,11 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
 
         const soldItem: SoldItemDetails = {
           productId: item.productId,
-          productName: item.productName, 
+          productName: item.productName || 'Nombre Desconocido', 
           quantitySold: quantityForSale,
           priceAtSale: priceForSale,
         };
-         if (item.category) {
+        if (item.category) {
           soldItem.category = item.category;
         }
         if (item.imageUrl) { 
@@ -398,37 +402,44 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         saleTotalItems += quantityForSale;
       }
 
-      if (successful) {
-        await batch.commit(); // Commit product quantity updates
-
-        // Then, if successful, add the sale record
+      if (successfulProcessing) {
         if (saleRecordItems.length > 0) {
-          await addDoc(collection(db, SALES_COLLECTION), {
-            saleDate: serverTimestamp(),
-            totalAmount: saleTotalAmount, // Already sanitized by calculations above
-            totalItems: saleTotalItems,   // Already sanitized
-            itemsSold: saleRecordItems,   // Items are sanitized during loop
-          });
+            await batch.commit(); // Commit product quantity updates
+            
+            await addDoc(collection(db, SALES_COLLECTION), {
+              saleDate: serverTimestamp(),
+              totalAmount: saleTotalAmount,
+              totalItems: saleTotalItems,
+              itemsSold: saleRecordItems,
+            });
+            
+            toast({
+              title: "🎉 Compra Exitosa 🎉",
+              description: "El stock de los productos ha sido actualizado y la venta registrada.",
+            });
+            return true;
+        } else {
+            // This means all items were skipped (e.g., quantityForSale was 0 for all)
+            toast({
+                title: "Venta No Procesada",
+                description: "No se seleccionaron artículos válidos o cantidades para la venta.",
+                variant: "default",
+            });
+            return false;
         }
-        
-        toast({
-          title: "🎉 Compra Exitosa 🎉",
-          description: "El stock de los productos ha sido actualizado y la venta registrada.",
-        });
-        return true;
       } else {
-        // No batch.commit() if not successful, so product quantities aren't changed
+        // successfulProcessing is false, an error occurred in the loop (e.g., stock issue, product not found)
         toast({
           title: "Error en la Venta",
-          description: errorMessage,
+          description: errorMessage, // This should now hold the specific error message
           variant: "destructive",
         });
         return false;
       }
     } catch (error) {
-      // This catch block will now primarily catch errors from batch.commit() or addDoc()
-      let firestoreErrorMessage = "Error al procesar la venta.";
-      if (error && typeof error === 'object' && 'code'in error) {
+      // This catch block handles errors from batch.commit() or addDoc()
+      let firestoreErrorMessage = "Error crítico al procesar la venta.";
+      if (error && typeof error === 'object' && 'code' in error) {
         firestoreErrorMessage += ` Código: ${(error as {code: string}).code}.`;
       } else if (error instanceof Error) {
         firestoreErrorMessage += ` Detalle: ${error.message}`;
@@ -472,3 +483,4 @@ export const useProducts = (): ProductContextType => {
   return context;
 };
 
+    
