@@ -73,7 +73,7 @@ export default function ProductCard({
         <CardTitle className="text-base sm:text-lg font-headline mb-1">
           {product.name}
         </CardTitle>
-        <CardDescription className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-3 min-h-[calc(3*1.25rem*1.4)] sm:min-h-[calc(3*1.4rem*1.4)]">
+        <CardDescription className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-3 min-h-[3rem] sm:min-h-[3.75rem]">
           {product.description}
         </CardDescription>
         <p className="text-md sm:text-lg font-semibold text-primary mb-1">
