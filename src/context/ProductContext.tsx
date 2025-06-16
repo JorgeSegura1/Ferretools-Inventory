@@ -41,7 +41,7 @@ interface ProductContextType {
   updateProductQuantity: (productId: string, newQuantity: number) => Promise<void>; 
   updateProductDetails: (productId: string, data: ProductDetailsUpdateData) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
-  processSaleAndUpdateStock: (itemsToSell: SaleItem[]) => Promise<boolean>;
+  processSaleAndUpdateStock: (itemsToSell: Array<Omit<SaleItem, 'maxQuantity' | 'name' | 'imageUrl' | 'price' | 'category'> & {productId: string, quantitySold: number, priceAtSale: number, productName: string, category?: string, imageUrl?: string }>) => Promise<boolean>;
   getProductById: (productId: string) => Product | undefined;
   loadingProducts: boolean;
 }
@@ -94,9 +94,13 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         if (data.arrivalDate && data.arrivalDate instanceof Timestamp) {
           arrivalDate = data.arrivalDate.toDate();
         }
+        // Ensure quantity is a valid number, default to 0 if not present, not a number, or NaN
+        const quantity = (typeof data.quantity === 'number' && !isNaN(data.quantity)) ? data.quantity : 0;
+
         productsData.push({ 
           id: docSnapshot.id, 
           ...data,
+          quantity, // Use the sanitized quantity
           arrivalDate 
         } as Product);
       });
@@ -158,12 +162,16 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       const productDocRef = !querySnapshot.empty ? querySnapshot.docs[0].ref : null;
       
       if (productDocRef) {
-        const existingProductData = querySnapshot.docs[0].data() as Product;
+        const existingProductData = querySnapshot.docs[0].data();
+        // Ensure existing quantity is a number, default to 0 if not or NaN
+        const currentQuantity = (typeof existingProductData.quantity === 'number' && !isNaN(existingProductData.quantity)) 
+                                ? existingProductData.quantity 
+                                : 0;
         const updatedProductFields = {
           name: productData.name,
           description: productData.description,
           price: productData.price,
-          quantity: (existingProductData.quantity || 0) + productData.quantity, 
+          quantity: currentQuantity + productData.quantity, 
           category: productData.category,
           imageUrl: imageUrlToSave, 
           arrivalDate: serverTimestamp() 
@@ -220,7 +228,9 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     setLoadingProducts(true);
     const productRef = doc(db, PRODUCTS_COLLECTION, productId);
     
-    const fieldsToUpdate: { quantity: number; imageUrl?: string } = { quantity: data.quantity };
+    const fieldsToUpdate: { quantity: number; imageUrl?: string } = { 
+        quantity: (typeof data.quantity === 'number' && !isNaN(data.quantity)) ? data.quantity : 0 
+    };
     let finalImageUrl: string | undefined = undefined; 
 
     try {
@@ -319,7 +329,9 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [toast]);
 
-  const processSaleAndUpdateStock = useCallback(async (itemsToSell: SaleItem[]): Promise<boolean> => {
+ const processSaleAndUpdateStock = useCallback(async (
+    itemsToSell: Array<Omit<SaleItem, 'maxQuantity'> & { priceAtSale: number, productName: string }>
+  ): Promise<boolean> => {
     setLoadingProducts(true);
     const batch = writeBatch(db);
     let successful = true;
@@ -342,39 +354,40 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
           break;
         }
 
-        const currentProduct = productSnap.data() as Product;
-        if (currentProduct.quantity < item.quantityToSell) {
-          errorMessage = `Stock insuficiente para "${currentProduct.name}". Disponible: ${currentProduct.quantity}, Solicitado: ${item.quantityToSell}.`;
+        const currentProductData = productSnap.data();
+        const currentQuantity = (typeof currentProductData.quantity === 'number' && !isNaN(currentProductData.quantity)) 
+                                ? currentProductData.quantity 
+                                : 0;
+
+        if (currentQuantity < item.quantityToSell) {
+          errorMessage = `Stock insuficiente para "${item.productName}". Disponible: ${currentQuantity}, Solicitado: ${item.quantityToSell}.`;
           successful = false;
           break;
         }
-        const newQuantity = currentProduct.quantity - item.quantityToSell;
+        const newQuantity = currentQuantity - item.quantityToSell;
         batch.update(productRef, { quantity: newQuantity });
-
-        // Prepare item for sale record
+        
         const soldItem: SoldItemDetails = {
           productId: item.productId,
-          productName: item.name,
+          productName: item.productName, 
           quantitySold: item.quantityToSell,
-          priceAtSale: item.price,
+          priceAtSale: item.priceAtSale,
         };
-        if (item.category) {
+         if (item.category) {
           soldItem.category = item.category;
         }
-        if (item.imageUrl) { // Assuming imageUrl on SaleItem is always a string
+        if (item.imageUrl) { 
           soldItem.imageUrl = item.imageUrl;
         }
         saleRecordItems.push(soldItem);
         
-        saleTotalAmount += item.price * item.quantityToSell;
+        saleTotalAmount += item.priceAtSale * item.quantityToSell;
         saleTotalItems += item.quantityToSell;
       }
 
       if (successful) {
-        // All stock checks passed, commit product updates
         await batch.commit();
 
-        // Now, record the sale
         if (saleRecordItems.length > 0) {
           await addDoc(collection(db, SALES_COLLECTION), {
             saleDate: serverTimestamp(),
