@@ -56,8 +56,9 @@ export default function ProductCard({
           <Image
             src={product.imageUrl}
             alt={product.name}
-            layout="fill"
-            objectFit="cover"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover"
             data-ai-hint={getProductHint(product.category)}
           />
           {isOutOfStock && (
@@ -70,7 +71,7 @@ export default function ProductCard({
         </div>
       </CardHeader>
       <CardContent className="p-3 sm:p-4 flex-grow">
-        <CardTitle className="text-base sm:text-lg font-headline mb-1">
+        <CardTitle className="text-base sm:text-lg font-headline mb-1 line-clamp-2 min-h-[3rem] sm:min-h-[3.5rem]">
           {product.name}
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-3 min-h-[3rem] sm:min-h-[3.75rem]">
