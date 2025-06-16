@@ -10,3 +10,13 @@ export type Product = {
   arrivalDate?: Date; // Optional: to store the arrival date of the product
   // userId?: string; // Optional: to associate product with a user
 };
+
+export type SaleItem = {
+  productId: string;
+  name: string;
+  imageUrl: string;
+  price: number;
+  category?: string; 
+  quantityToSell: number;
+  maxQuantity: number; // Original stock quantity when added to sale list
+};

@@ -3,24 +3,51 @@ import type { Product } from '@/types';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { PlusCircle, MinusCircle } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
+  role?: 'admin' | 'user' | null;
+  onSelectForSale?: (product: Product) => void;
+  onRemoveFromSale?: (productId: string) => void;
+  isProductInSale?: (productId: string) => boolean;
 }
 
 function getProductHint(category?: string): string {
   if (category) {
-    const words = category.split(' ').filter(Boolean); // filter out empty strings from multiple spaces
+    const words = category.split(' ').filter(Boolean);
     if (words.length === 0) return 'hardware tool';
     if (words.length === 1) return words[0];
     return words.slice(0, 2).join(' ');
   }
-  return 'hardware tool'; // Default hint
+  return 'hardware tool';
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ 
+  product, 
+  role, 
+  onSelectForSale, 
+  onRemoveFromSale,
+  isProductInSale
+}: ProductCardProps) {
   const isOutOfStock = product.quantity === 0;
+  const productIsSelectedForSale = isProductInSale ? isProductInSale(product.id) : false;
+
+  const handleSelectClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click event if any
+    if (onSelectForSale && product.quantity > 0 && !productIsSelectedForSale) {
+      onSelectForSale(product);
+    }
+  };
+
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onRemoveFromSale && productIsSelectedForSale) {
+      onRemoveFromSale(product.id);
+    }
+  };
 
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
@@ -51,10 +78,23 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </p>
       </CardContent>
-      <CardFooter className="p-4 pt-0">
+      <CardFooter className="p-4 pt-0 flex justify-between items-center">
         <Badge variant={isOutOfStock ? 'secondary' : 'default'} className={cn(isOutOfStock ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
           {isOutOfStock ? 'No disponible' : `Disponible: ${product.quantity}`}
         </Badge>
+        {role === 'admin' && !isOutOfStock && onSelectForSale && onRemoveFromSale && isProductInSale && (
+          <div>
+            {productIsSelectedForSale ? (
+              <Button variant="outline" size="sm" onClick={handleRemoveClick} className="text-xs">
+                <MinusCircle className="mr-1 h-3.5 w-3.5" /> Quitar
+              </Button>
+            ) : (
+              <Button variant="default" size="sm" onClick={handleSelectClick} className="text-xs">
+                <PlusCircle className="mr-1 h-3.5 w-3.5" /> Vender
+              </Button>
+            )}
+          </div>
+        )}
       </CardFooter>
     </Card>
   );

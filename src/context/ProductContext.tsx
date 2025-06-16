@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Product } from '@/types';
+import type { Product, SaleItem } from '@/types';
 import { db, storage } from '@/lib/firebase';
 import { 
   collection, 
@@ -16,7 +16,8 @@ import {
   where, 
   getDocs, 
   limit,
-  getDoc 
+  getDoc,
+  writeBatch 
 } from 'firebase/firestore';
 import { 
   ref as storageFirebaseRef,
@@ -37,9 +38,10 @@ interface ProductDetailsUpdateData {
 interface ProductContextType {
   products: Product[];
   addProduct: (product: Omit<Product, 'id' | 'userId' | 'arrivalDate'>) => Promise<void>; 
-  updateProductQuantity: (productId: string, newQuantity: number) => Promise<void>; // Kept for potential direct use
+  updateProductQuantity: (productId: string, newQuantity: number) => Promise<void>; 
   updateProductDetails: (productId: string, data: ProductDetailsUpdateData) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
+  processSaleAndUpdateStock: (itemsToSell: Array<{ productId: string; quantitySold: number }>) => Promise<boolean>;
   getProductById: (productId: string) => Product | undefined;
   loadingProducts: boolean;
 }
@@ -85,7 +87,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const productsData: Product[] = [];
-      querySnapshot.forEach((docSnapshot) => { // Renamed doc to docSnapshot to avoid conflict
+      querySnapshot.forEach((docSnapshot) => { 
         const data = docSnapshot.data();
         let arrivalDate: Date | undefined = undefined;
         if (data.arrivalDate && data.arrivalDate instanceof Timestamp) {
@@ -157,13 +159,13 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       if (productDocRef) {
         const existingProductData = querySnapshot.docs[0].data() as Product;
         const updatedProductFields = {
-          name: productData.name, // Name might not change, but good to include if other details are updated
+          name: productData.name,
           description: productData.description,
           price: productData.price,
-          quantity: (existingProductData.quantity || 0) + productData.quantity, // Sum quantity
+          quantity: (existingProductData.quantity || 0) + productData.quantity, 
           category: productData.category,
-          imageUrl: imageUrlToSave, // Use the (potentially new) image URL
-          arrivalDate: serverTimestamp() // Update arrival date for restock
+          imageUrl: imageUrlToSave, 
+          arrivalDate: serverTimestamp() 
         };
         await updateDoc(productDocRef, updatedProductFields);
         toast({ title: "Producto Actualizado", description: `"${productData.name}" actualizado: cantidad sumada y detalles actualizados.`});
@@ -199,7 +201,6 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       await updateDoc(productRef, {
         quantity: Math.max(0, newQuantity) 
       });
-      // Toast for this specific action can be added here if needed, or rely on general updateProductDetails
     } catch (error) {
       let updateErrorMessage = "No se pudo actualizar la cantidad del producto.";
        if (error && typeof error === 'object' && 'code' in error) {
@@ -219,7 +220,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     const productRef = doc(db, PRODUCTS_COLLECTION, productId);
     
     const fieldsToUpdate: { quantity: number; imageUrl?: string } = { quantity: data.quantity };
-    let finalImageUrl: string | undefined = undefined; // Will hold the URL if image is changed
+    let finalImageUrl: string | undefined = undefined; 
 
     try {
       const productSnap = await getDoc(productRef);
@@ -228,7 +229,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Product not found");
       }
       const existingProduct = productSnap.data() as Product;
-      finalImageUrl = existingProduct.imageUrl; // Start with current image
+      finalImageUrl = existingProduct.imageUrl; 
 
       if (data.generateNewImage && (!data.newImageUrl || data.newImageUrl.trim() === '')) {
         toast({ title: "Generando nueva imagen con IA...", description: "Esto puede tomar unos segundos." });
@@ -257,10 +258,10 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
           finalImageUrl = await getDownloadURL(imageFileRef);
           toast({ title: "Imagen Data URI subida.", variant: "default" });
         } else {
-          finalImageUrl = data.newImageUrl; // Direct URL provided
+          finalImageUrl = data.newImageUrl; 
         }
       }
-      // If finalImageUrl is different from existingProduct.imageUrl, it means a new image was set.
+      
       if (finalImageUrl && finalImageUrl !== existingProduct.imageUrl) {
         fieldsToUpdate.imageUrl = finalImageUrl;
       }
@@ -317,6 +318,68 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [toast]);
 
+  const processSaleAndUpdateStock = useCallback(async (itemsToSell: Array<{ productId: string; quantitySold: number }>): Promise<boolean> => {
+    setLoadingProducts(true);
+    const batch = writeBatch(db);
+    let successful = true;
+    let errorMessage = "No se pudo completar la venta.";
+
+    try {
+      for (const item of itemsToSell) {
+        if (item.quantitySold <= 0) continue; 
+
+        const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
+        const productSnap = await getDoc(productRef);
+
+        if (!productSnap.exists()) {
+          errorMessage = `Producto con ID ${item.productId} no encontrado.`;
+          successful = false;
+          break;
+        }
+
+        const currentProduct = productSnap.data() as Product;
+        if (currentProduct.quantity < item.quantitySold) {
+          errorMessage = `Stock insuficiente para "${currentProduct.name}". Disponible: ${currentProduct.quantity}, Solicitado: ${item.quantitySold}.`;
+          successful = false;
+          break;
+        }
+        const newQuantity = currentProduct.quantity - item.quantitySold;
+        batch.update(productRef, { quantity: newQuantity });
+      }
+
+      if (successful) {
+        await batch.commit();
+        toast({
+          title: "🎉 Compra Exitosa 🎉",
+          description: "El stock de los productos ha sido actualizado.",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Error en la Venta",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      let firestoreErrorMessage = "Error al procesar la venta.";
+      if (error && typeof error === 'object' && 'code'in error) {
+        firestoreErrorMessage += ` Código: ${(error as {code: string}).code}.`;
+      } else if (error instanceof Error) {
+        firestoreErrorMessage += ` Detalle: ${error.message}`;
+      }
+      toast({
+        title: "Error Crítico en Venta",
+        description: firestoreErrorMessage,
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [toast]);
+
   const getProductById = useCallback((productId: string) => {
     return products.find(p => p.id === productId);
   }, [products]);
@@ -328,6 +391,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
       updateProductQuantity, 
       updateProductDetails, 
       deleteProduct, 
+      processSaleAndUpdateStock,
       getProductById, 
       loadingProducts 
     }}>

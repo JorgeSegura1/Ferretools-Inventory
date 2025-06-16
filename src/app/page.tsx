@@ -3,10 +3,11 @@
 
 import ProductList from '@/components/products/ProductList';
 import { useProducts } from '@/context/ProductContext';
+import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Filter, ListTree, Tag, XIcon } from 'lucide-react';
+import { Filter, ListTree, Tag, XIcon, ShoppingCart, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,13 +26,15 @@ import {
   SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
+import SaleReviewSheet from '@/components/admin/SaleReviewSheet';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
-import type { Product } from '@/types';
+import type { Product, SaleItem } from '@/types';
 
 export default function HomePage() {
-  const { products, loadingProducts } = useProducts();
+  const { products, loadingProducts, processSaleAndUpdateStock } = useProducts();
+  const { user, role } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
@@ -40,15 +43,23 @@ export default function HomePage() {
   const [showInStockOnly, setShowInStockOnly] = useState(false);
   const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false);
   
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [isSaleSheetOpen, setIsSaleSheetOpen] = useState(false);
+  const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
+  const [isProcessingSale, setIsProcessingSale] = useState(false);
 
   useEffect(() => {
     if (products.length > 0) {
-      const prices = products.map(p => p.price);
-      const min = Math.min(...prices);
-      const max = Math.max(...prices);
-      setMinMaxPrice([min, max]);
-      setCurrentPriceRange([min, max]); // Initialize currentPriceRange
+      const prices = products.map(p => p.price).filter(p => typeof p === 'number');
+      if (prices.length > 0) {
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        setMinMaxPrice([min, max]);
+        setCurrentPriceRange([min, max]); 
+      } else {
+        setMinMaxPrice([0,1000]);
+        setCurrentPriceRange([0,1000]);
+      }
     }
   }, [products]);
 
@@ -56,7 +67,7 @@ export default function HomePage() {
     if (loadingProducts) return [];
     const categories = products
       .map(product => product.category)
-      .filter((category): category is string => !!category); // Type guard
+      .filter((category): category is string => !!category); 
     return [...new Set(categories)].sort();
   }, [products, loadingProducts]);
 
@@ -95,7 +106,7 @@ export default function HomePage() {
   const handleClearAdvancedFilters = () => {
     setShowInStockOnly(false);
     setShowOutOfStockOnly(false);
-    setCurrentPriceRange(minMaxPrice); // Reset to full range
+    setCurrentPriceRange(minMaxPrice); 
   };
   
   const activeAdvancedFiltersCount = [
@@ -109,6 +120,65 @@ export default function HomePage() {
     setSelectedCategory(null);
     handleClearAdvancedFilters();
   };
+
+  // Sale Item Management
+  const handleSelectForSale = (product: Product) => {
+    setSaleItems(prevItems => {
+      const existingItem = prevItems.find(item => item.productId === product.id);
+      if (existingItem) {
+        // If item already selected, maybe open sheet or show notification? For now, do nothing.
+        // Or remove it: return prevItems.filter(item => item.productId !== product.id);
+        return prevItems; 
+      }
+      if (product.quantity > 0) {
+        return [...prevItems, {
+          productId: product.id,
+          name: product.name,
+          imageUrl: product.imageUrl,
+          price: product.price,
+          category: product.category,
+          quantityToSell: 1,
+          maxQuantity: product.quantity,
+        }];
+      }
+      return prevItems; // Do not add if out of stock
+    });
+  };
+
+  const handleRemoveFromSale = (productId: string) => {
+    setSaleItems(prevItems => prevItems.filter(item => item.productId !== productId));
+  };
+  
+  const isProductInSale = (productId: string): boolean => {
+    return saleItems.some(item => item.productId === productId);
+  }
+
+  const handleUpdateSaleQuantity = (productId: string, newQuantity: number) => {
+    setSaleItems(prevItems =>
+      prevItems.map(item =>
+        item.productId === productId
+          ? { ...item, quantityToSell: Math.max(1, Math.min(newQuantity, item.maxQuantity)) }
+          : item
+      )
+    );
+  };
+
+  const handleConfirmSale = async () => {
+    if (saleItems.length === 0) return;
+    setIsProcessingSale(true);
+    const itemsToProcess = saleItems.map(item => ({
+      productId: item.productId,
+      quantitySold: item.quantityToSell,
+    }));
+    
+    const success = await processSaleAndUpdateStock(itemsToProcess);
+    if (success) {
+      setSaleItems([]);
+      setIsSaleSheetOpen(false); 
+    }
+    setIsProcessingSale(false);
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -125,11 +195,22 @@ export default function HomePage() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full"
         />
-        {(searchTerm || selectedCategory || activeAdvancedFiltersCount > 0) && (
-          <Button onClick={resetAllFilters} variant="ghost" className="text-sm justify-self-start md:justify-self-end">
-            <XIcon className="mr-2 h-4 w-4" /> Limpiar todos los filtros
-          </Button>
-        )}
+        <div className="flex items-center gap-2 justify-self-start md:justify-self-end">
+          {(searchTerm || selectedCategory || activeAdvancedFiltersCount > 0) && (
+            <Button onClick={resetAllFilters} variant="ghost" className="text-sm">
+              <XIcon className="mr-2 h-4 w-4" /> Limpiar filtros
+            </Button>
+          )}
+          {role === 'admin' && saleItems.length > 0 && (
+            <Button variant="outline" onClick={() => setIsSaleSheetOpen(true)} size="sm" className="relative">
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Revisar Venta
+              <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+                {saleItems.length}
+              </span>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="mb-8 flex flex-wrap justify-center items-center gap-2 sm:gap-3 px-2">
@@ -159,7 +240,7 @@ export default function HomePage() {
           Marca
         </Button>
 
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="sm" className="text-sm relative">
               <Filter className="mr-2 h-3.5 w-3.5" />
@@ -213,11 +294,11 @@ export default function HomePage() {
                   id="priceRange"
                   min={minMaxPrice[0]}
                   max={minMaxPrice[1]}
-                  step={1} // Adjust step as needed, e.g., 0.01 for cents
+                  step={1} 
                   value={currentPriceRange}
                   onValueChange={(value) => setCurrentPriceRange(value as [number, number])}
                   minStepsBetweenThumbs={0}
-                  disabled={products.length === 0}
+                  disabled={products.length === 0 || minMaxPrice[0] === minMaxPrice[1]}
                 />
                  <div className="flex justify-between text-xs text-muted-foreground">
                     <span>${minMaxPrice[0]}</span>
@@ -236,9 +317,29 @@ export default function HomePage() {
       </div>
       
       {loadingProducts && products.length === 0 ? (
-        <p className="text-center text-muted-foreground">Cargando productos...</p>
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
       ) : (
-        <ProductList products={filteredProducts} />
+        <ProductList 
+          products={filteredProducts} 
+          role={role}
+          onSelectForSale={handleSelectForSale}
+          onRemoveFromSale={handleRemoveFromSale}
+          isProductInSale={isProductInSale}
+        />
+      )}
+
+      {role === 'admin' && (
+        <SaleReviewSheet
+          isOpen={isSaleSheetOpen}
+          setIsOpen={setIsSaleSheetOpen}
+          items={saleItems}
+          onUpdateQuantity={handleUpdateSaleQuantity}
+          onRemoveItem={handleRemoveFromSale}
+          onConfirmSale={handleConfirmSale}
+          isProcessingSale={isProcessingSale}
+        />
       )}
     </div>
   );
