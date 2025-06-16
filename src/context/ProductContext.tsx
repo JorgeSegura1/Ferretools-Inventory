@@ -356,15 +356,20 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         const quantityForSale = (typeof item.quantitySold === 'number' && !isNaN(item.quantitySold)) ? item.quantitySold : 0;
         
         if (quantityForSale <= 0) {
-           // This item will be skipped, not an error for the whole sale unless all items are like this
           continue; 
         }
-
-        const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
+        
+        const currentProductId = String(item.productId); // Ensure productId is a string
+        if (!currentProductId) {
+            errorMessage = `ID de producto inválido encontrado para "${item.productName || 'un artículo'}".`;
+            successfulProcessing = false;
+            break;
+        }
+        const productRef = doc(db, PRODUCTS_COLLECTION, currentProductId);
         const productSnap = await getDoc(productRef);
 
         if (!productSnap.exists()) {
-          errorMessage = `Producto "${item.productName}" (ID: ${item.productId}) no encontrado en el inventario.`;
+          errorMessage = `Producto "${item.productName}" (ID: ${currentProductId}) no encontrado en el inventario.`;
           successfulProcessing = false;
           break;
         }
@@ -380,12 +385,12 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
           break;
         }
         const newQuantity = currentQuantity - quantityForSale;
-        batch.update(productRef, { quantity: newQuantity });
+        batch.update(productRef, { quantity: Number(newQuantity) }); // Ensure newQuantity is a number
         
         const priceForSale = (typeof item.priceAtSale === 'number' && !isNaN(item.priceAtSale)) ? item.priceAtSale : 0;
 
         const soldItem: SoldItemDetails = {
-          productId: item.productId,
+          productId: currentProductId,
           productName: item.productName || 'Nombre Desconocido', 
           quantitySold: quantityForSale,
           priceAtSale: priceForSale,
@@ -404,14 +409,15 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
 
       if (successfulProcessing) {
         if (saleRecordItems.length > 0) {
-            await batch.commit(); // Commit product quantity updates
+            await batch.commit(); 
             
-            await addDoc(collection(db, SALES_COLLECTION), {
+            const salesData = {
               saleDate: serverTimestamp(),
-              totalAmount: saleTotalAmount,
-              totalItems: saleTotalItems,
+              totalAmount: Number(saleTotalAmount),
+              totalItems: Number(saleTotalItems),
               itemsSold: saleRecordItems,
-            });
+            };
+            await addDoc(collection(db, SALES_COLLECTION), salesData);
             
             toast({
               title: "🎉 Compra Exitosa 🎉",
@@ -419,25 +425,22 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
             });
             return true;
         } else {
-            // This means all items were skipped (e.g., quantityForSale was 0 for all)
             toast({
                 title: "Venta No Procesada",
                 description: "No se seleccionaron artículos válidos o cantidades para la venta.",
-                variant: "default",
+                variant: "default", // Changed from destructive to default as it's not a critical error
             });
             return false;
         }
       } else {
-        // successfulProcessing is false, an error occurred in the loop (e.g., stock issue, product not found)
         toast({
           title: "Error en la Venta",
-          description: errorMessage, // This should now hold the specific error message
+          description: errorMessage, 
           variant: "destructive",
         });
         return false;
       }
     } catch (error) {
-      // This catch block handles errors from batch.commit() or addDoc()
       let firestoreErrorMessage = "Error crítico al procesar la venta.";
       if (error && typeof error === 'object' && 'code' in error) {
         firestoreErrorMessage += ` Código: ${(error as {code: string}).code}.`;
@@ -482,5 +485,3 @@ export const useProducts = (): ProductContextType => {
   }
   return context;
 };
-
-    
