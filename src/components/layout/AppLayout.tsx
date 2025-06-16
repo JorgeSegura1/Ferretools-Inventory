@@ -93,21 +93,20 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   };
 
   const visibleNavItems = baseNavItems.filter(item => {
-    if (!item.requiresAuth) return true; // Public item
+    if (!item.requiresAuth) return true; 
 
-    // For auth-required items:
-    if (loading) return false; // Don't show auth-required items while auth state (user & role) is loading. Avoids flash.
-    if (!user) return false;   // No user, don't show.
+    if (loading) return false; 
+    if (!user) return false;   
 
     if (item.requiredRole === 'admin') {
-      if (!role) return false; // Role not yet determined (should be quick after user loads), don't show admin items.
+      if (!role) return false; 
       return role === 'admin';
     }
-    return true; // Auth required, user exists, no specific role needed for this item.
+    return true; 
   });
 
   const currentAuthNavItems = authNavItems.filter(item => {
-    if (loading) return false; // Don't show login/signup if loading
+    if (loading) return false; 
     if (item.showIfLoggedOut && user) return false;
     return true;
   });
@@ -191,7 +190,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           )}
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="md:ml-64">
+      <SidebarInset className="ml-0 md:ml-64"> {/* Changed this line */}
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           {children}
         </main>
