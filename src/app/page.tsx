@@ -135,7 +135,7 @@ export default function HomePage() {
           productId: product.id,
           name: product.name,
           imageUrl: product.imageUrl,
-          price: product.price,
+          price: product.price, // This is priceAtSale
           category: product.category,
           quantityToSell: 1,
           maxQuantity: product.quantity,
@@ -169,6 +169,10 @@ export default function HomePage() {
     const itemsToProcess = saleItems.map(item => ({
       productId: item.productId,
       quantitySold: item.quantityToSell,
+      priceAtSale: item.price, // Pass the price from SaleItem
+      productName: item.name,    // Pass the name from SaleItem
+      category: item.category,   // Pass the category from SaleItem
+      imageUrl: item.imageUrl    // Pass the imageUrl from SaleItem
     }));
     
     const success = await processSaleAndUpdateStock(itemsToProcess);
@@ -344,3 +348,4 @@ export default function HomePage() {
     </div>
   );
 }
+
