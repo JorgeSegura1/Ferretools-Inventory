@@ -30,7 +30,7 @@ export default function ProductCard({
   role, 
   onSelectForSale, 
   onRemoveFromSale,
-  isProductInSale
+  isProductInSale 
 }: ProductCardProps) {
   const isOutOfStock = product.quantity === 0;
   const productIsSelectedForSale = isProductInSale ? isProductInSale(product.id) : false;
@@ -70,7 +70,7 @@ export default function ProductCard({
         </div>
       </CardHeader>
       <CardContent className="p-3 sm:p-4 flex-grow">
-        <CardTitle className="text-base sm:text-lg font-headline mb-1 line-clamp-2 min-h-[calc(2*1.5rem*1.2)] sm:min-h-[calc(2*1.75rem*1.2)]">
+        <CardTitle className="text-base sm:text-lg font-headline mb-1">
           {product.name}
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-3 min-h-[calc(3*1.25rem*1.4)] sm:min-h-[calc(3*1.4rem*1.4)]">
