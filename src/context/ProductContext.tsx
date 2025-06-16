@@ -359,22 +359,21 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
           continue; 
         }
 
-        const currentProductIdValue = item.productId;
+        const currentProductIdValue = String(item.productId || '').trim();
 
-        if (typeof currentProductIdValue !== 'string' || !currentProductIdValue.trim()) {
+        if (!currentProductIdValue) {
             errorMessage = `ID de producto inválido para "${item.productName || 'un artículo'}". La venta no puede continuar.`;
             successfulProcessing = false;
             toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
             setLoadingProducts(false);
             return false; 
         }
-        const currentProductId = currentProductIdValue.trim();
-        const productRef = doc(db, PRODUCTS_COLLECTION, currentProductId);
-
+        
+        const productRef = doc(db, PRODUCTS_COLLECTION, currentProductIdValue);
         const productSnap = await getDoc(productRef);
 
         if (!productSnap.exists()) {
-          errorMessage = `Producto "${item.productName}" (ID: ${currentProductId}) no encontrado en el inventario.`;
+          errorMessage = `Producto "${item.productName}" (ID: ${currentProductIdValue}) no encontrado en el inventario.`;
           successfulProcessing = false;
           toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
           setLoadingProducts(false);
@@ -408,7 +407,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         const priceForSale = (typeof item.priceAtSale === 'number' && !isNaN(item.priceAtSale)) ? item.priceAtSale : 0;
 
         const soldItem: SoldItemDetails = {
-          productId: currentProductId,
+          productId: currentProductIdValue,
           productName: item.productName || 'Nombre Desconocido',
           quantitySold: quantityForSale,
           priceAtSale: Number(priceForSale),
@@ -416,7 +415,8 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         if (item.category) {
           soldItem.category = item.category;
         }
-        if (item.imageUrl) {
+        // Only store imageUrl if it's NOT a data URI to keep document size small
+        if (item.imageUrl && !item.imageUrl.startsWith('data:image')) {
           soldItem.imageUrl = item.imageUrl;
         }
         saleRecordItems.push(soldItem);
@@ -424,12 +424,10 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
         saleTotalAmount += Number(priceForSale) * quantityForSale;
         saleTotalItems += quantityForSale;
       }
-
-      // This check is technically redundant if early returns are hit, but good for clarity
+      
       if (!successfulProcessing) {
-        // Error toast would have already been shown by the failing check
         setLoadingProducts(false);
-        return false;
+        return false; 
       }
 
       if (saleRecordItems.length > 0) {
@@ -453,26 +451,26 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
           toast({
               title: "Venta No Procesada",
               description: "No se seleccionaron artículos válidos o cantidades para la venta.",
-              variant: "default", // Changed from destructive to default as it's not strictly an error
+              variant: "default", 
           });
           setLoadingProducts(false);
           return false;
       }
     } catch (error) {
-      let firestoreErrorMessage = "Error crítico al procesar la venta.";
+      let finalErrorMessage = "Error crítico al procesar la venta.";
       if (error instanceof Error && error.message) {
-        firestoreErrorMessage += ` Detalle SDK: ${error.message}`;
+        finalErrorMessage += ` Detalle SDK: ${error.message}`;
       }
       if (error && typeof error === 'object' && 'code' in error) {
         const fbError = error as { code: string; message?: string };
-        firestoreErrorMessage += ` Código Firebase: ${fbError.code}.`;
-        if (fbError.message && !firestoreErrorMessage.includes(fbError.message)) {
-          firestoreErrorMessage += ` Mensaje Firebase: ${fbError.message}`;
+        finalErrorMessage += ` Código Firebase: ${fbError.code}.`;
+        if (fbError.message && !finalErrorMessage.includes(fbError.message)) {
+          finalErrorMessage += ` Mensaje Firebase: ${fbError.message}`;
         }
       }
       toast({
         title: "Error Crítico en Venta",
-        description: firestoreErrorMessage,
+        description: finalErrorMessage,
         variant: "destructive",
       });
       setLoadingProducts(false);

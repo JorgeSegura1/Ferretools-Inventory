@@ -192,7 +192,7 @@ export default function SalesPage() {
                               {transaction.itemsSold.map(item => (
                                 <li key={item.productId} className="flex items-center justify-between">
                                   <div className="flex items-center">
-                                    {item.imageUrl && !item.imageUrl.includes('placehold.co') ? (
+                                    {item.imageUrl && !item.imageUrl.startsWith('data:image') ? (
                                         <Image src={item.imageUrl} alt={item.productName} width={24} height={24} className="rounded-sm object-cover mr-2" data-ai-hint={getProductHint(item.category)} />
                                     ) : (
                                         <ImageIcon className="h-4 w-4 mr-2 text-muted-foreground" />
