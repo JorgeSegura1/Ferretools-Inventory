@@ -15,10 +15,8 @@ import NextImage from 'next/image';
 import {
   Bar,
   BarChart,
-  ResponsiveContainer,
   XAxis,
   YAxis,
-  Tooltip,
   CartesianGrid,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -129,40 +127,41 @@ export default function SalesPage() {
       </div>
 
       {/* Analytics Chart */}
-      <Card className="glass-card border-white/5">
+      <Card className="glass-card border-white/5 overflow-hidden">
         <CardHeader>
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
             <TrendingUp className="h-4 w-4" /> Tendencia de Ventas (Últimos 7 días)
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-[300px]">
-          <ChartContainer config={{ total: { label: "Ventas", color: "hsl(var(--primary))" } }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="rgba(255,255,255,0.3)" 
-                  fontSize={10} 
-                  tickLine={false} 
-                  axisLine={false} 
-                />
-                <YAxis 
-                  stroke="rgba(255,255,255,0.3)" 
-                  fontSize={10} 
-                  tickLine={false} 
-                  axisLine={false}
-                  tickFormatter={(value) => `$${(value / 1000)}k`}
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar 
-                  dataKey="total" 
-                  fill="hsl(var(--primary))" 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={30}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+        <CardContent className="pb-4">
+          <ChartContainer 
+            config={{ total: { label: "Ventas", color: "hsl(var(--primary))" } }}
+            className="h-[300px] w-full aspect-auto"
+          >
+            <BarChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+              <XAxis 
+                dataKey="date" 
+                stroke="rgba(255,255,255,0.3)" 
+                fontSize={10} 
+                tickLine={false} 
+                axisLine={false} 
+              />
+              <YAxis 
+                stroke="rgba(255,255,255,0.3)" 
+                fontSize={10} 
+                tickLine={false} 
+                axisLine={false}
+                tickFormatter={(value) => `$${(value / 1000)}k`}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar 
+                dataKey="total" 
+                fill="var(--color-total)" 
+                radius={[4, 4, 0, 0]} 
+                barSize={40}
+              />
+            </BarChart>
           </ChartContainer>
         </CardContent>
       </Card>
