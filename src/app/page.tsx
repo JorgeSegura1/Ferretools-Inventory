@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Filter, ListTree, XIcon, ShoppingCart, Loader2, Sparkles, Search, BarChart3, TrendingUp, AlertCircle, ChevronRight, Zap, Radio, Globe } from 'lucide-react';
+import { Filter, ListTree, ShoppingCart, Loader2, Search, BarChart3, Radio, Globe, ChevronRight, Zap, AlertCircle, ShoppingBag } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +29,6 @@ import {
 import SaleReviewSheet from '@/components/admin/SaleReviewSheet';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Product, SaleItem } from '@/types';
 import Image from 'next/image';
@@ -52,7 +51,6 @@ export default function HomePage() {
   const [isProcessingSale, setIsProcessingSale] = useState(false);
 
   const featuredRef = useRef<HTMLDivElement>(null);
-  const tradeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (products.length > 0) {
@@ -101,17 +99,10 @@ export default function HomePage() {
     return tempProducts;
   }, [products, searchTerm, selectedCategory, showInStockOnly, showOutOfStockOnly, currentPriceRange]);
 
-  const resetAllFilters = () => {
-    setSearchTerm('');
-    setSelectedCategory(null);
-    setShowInStockOnly(false);
-    setShowOutOfStockOnly(false);
-    setCurrentPriceRange(minMaxPrice);
-  };
-
   const handleSelectForSale = (product: Product) => {
     setSaleItems(prev => {
-      if (prev.find(item => item.productId === product.id)) return prev;
+      const existing = prev.find(item => item.productId === product.id);
+      if (existing) return prev;
       return [...prev, {
         productId: product.id,
         name: product.name,
@@ -122,6 +113,8 @@ export default function HomePage() {
         maxQuantity: product.quantity,
       }];
     });
+    // Abrir automáticamente el carrito al agregar un item
+    setIsSaleSheetOpen(true);
   };
 
   const handleConfirmSale = async () => {
@@ -160,7 +153,8 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-12 pb-20">
+    <div className="space-y-12 pb-20 relative">
+      {/* Hero Section */}
       <section className="relative py-12 md:py-20 px-6 md:px-12 rounded-[2.5rem] overflow-hidden border border-white/5 bg-gradient-to-br from-primary/20 via-background to-background shadow-2xl">
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
         <div className="relative z-10 flex flex-col items-start gap-8 max-w-3xl">
@@ -176,7 +170,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Control Panel */}
+      {/* Control Panel (Búsqueda y Filtros) */}
       <div className="sticky top-4 z-30 flex flex-col gap-6 p-6 glass-card rounded-2xl shadow-2xl border-white/10">
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="relative w-full">
@@ -244,7 +238,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Admin Quick Stats - Smart Warehouse Edition */}
+      {/* Admin Stats */}
       {role === 'admin' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="glass-card border-white/5 bg-white/[0.02]">
@@ -332,7 +326,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Grid Section */}
+      {/* Product List */}
       {loadingProducts && products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32 gap-4">
           <Loader2 className="h-14 w-14 animate-spin text-primary" />
@@ -355,6 +349,22 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Botón Flotante del Carrito */}
+      {saleItems.length > 0 && (
+        <div className="fixed bottom-8 right-8 z-50 animate-in fade-in slide-in-from-bottom-10 duration-500">
+          <Button 
+            onClick={() => setIsSaleSheetOpen(true)}
+            className="h-16 w-16 rounded-full premium-gradient shadow-2xl shadow-primary/40 border-none group relative"
+          >
+            <ShoppingCart className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
+            <span className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-accent text-white text-[10px] font-black flex items-center justify-center border-2 border-background">
+              {saleItems.length}
+            </span>
+          </Button>
+        </div>
+      )}
+
+      {/* Sheet de Revisión */}
       {user && (
         <SaleReviewSheet
           isOpen={isSaleSheetOpen}
@@ -369,3 +379,4 @@ export default function HomePage() {
     </div>
   );
 }
+
