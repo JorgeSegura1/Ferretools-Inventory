@@ -8,7 +8,6 @@ export type Product = {
   imageUrl: string;
   category?: string; // Optional: e.g., "tools", "paint", "fasteners"
   arrivalDate?: Date; // Optional: to store the arrival date of the product
-  // userId?: string; // Optional: to associate product with a user
 };
 
 export type SaleItem = {
@@ -37,5 +36,5 @@ export interface SaleRecord {
   totalAmount: number; // Total for this specific sale transaction
   totalItems: number; // Total items in this specific sale transaction
   itemsSold: SoldItemDetails[];
-  // userId?: string; // Optional: who made the sale if needed (could be Firebase auth user ID)
+  userId?: string; // ID of the user who made the purchase
 }

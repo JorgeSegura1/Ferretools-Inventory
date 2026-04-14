@@ -2,7 +2,7 @@
 "use client";
 
 import type { Product, SaleItem, SaleRecord, SoldItemDetails } from '@/types';
-import { db, storage } from '@/lib/firebase';
+import { db, storage, auth } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -37,7 +37,7 @@ interface ProductDetailsUpdateData {
 
 interface ProductContextType {
   products: Product[];
-  addProduct: (product: Omit<Product, 'id' | 'userId' | 'arrivalDate'>) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id' | 'arrivalDate'>) => Promise<void>;
   updateProductQuantity: (productId: string, newQuantity: number) => Promise<void>;
   updateProductDetails: (productId: string, data: ProductDetailsUpdateData) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
@@ -124,7 +124,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [toast]);
 
-  const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'userId' | 'arrivalDate'>) => {
+  const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'arrivalDate'>) => {
     setLoadingProducts(true);
     let imageUrlToSave = productData.imageUrl;
 
@@ -351,6 +351,8 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
     let saleTotalAmount = 0;
     let saleTotalItems = 0;
 
+    const currentUserId = auth.currentUser?.uid;
+
     try {
       for (const item of itemsToSell) {
         const quantityForSale = (typeof item.quantitySold === 'number' && !isNaN(item.quantitySold)) ? item.quantitySold : 0;
@@ -438,6 +440,7 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
             totalAmount: Number(saleTotalAmount),
             totalItems: Number(saleTotalItems),
             itemsSold: saleRecordItems,
+            userId: currentUserId || null,
           };
           await addDoc(collection(db, SALES_COLLECTION), salesData);
 
@@ -505,4 +508,3 @@ export const useProducts = (): ProductContextType => {
   }
   return context;
 };
-

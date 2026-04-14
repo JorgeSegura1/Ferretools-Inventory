@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, History, DollarSign, ListChecks } from 'lucide-react';
+import { LayoutGrid, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, History, DollarSign, ListChecks, ShoppingBag } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -23,6 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const baseNavItems = [
   { href: '/', label: 'Explorar Catálogo', icon: LayoutGrid, requiresAuth: false },
+  { href: '/purchases', label: 'Mis Compras', icon: ShoppingBag, requiresAuth: true },
   { href: '/inventory', label: 'Centro de Inventario', icon: Warehouse, requiresAuth: true, requiredRole: 'admin' },
   { href: '/inventory/add', label: 'Nuevo Suministro', icon: PlusCircle, requiresAuth: true, requiredRole: 'admin' },
   { href: '/inventory/history', label: 'Registro de Entradas', icon: History, requiresAuth: true, requiredRole: 'admin' },
