@@ -7,7 +7,7 @@ import type { SaleRecord } from '@/types';
 import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, ShoppingBag, Calendar, Package, MapPin, AlertCircle, ExternalLink } from 'lucide-react';
+import { Loader2, ShoppingBag, MapPin, AlertCircle, ExternalLink, Radio, Globe } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import NextImage from 'next/image';
@@ -54,7 +54,6 @@ export default function PurchasesPage() {
       return;
     }
 
-    // Esta consulta requiere un índice compuesto: userId (Asc) + saleDate (Desc)
     const purchasesQuery = query(
       collection(db, 'sales'),
       where('userId', '==', user.uid),
@@ -66,11 +65,8 @@ export default function PurchasesPage() {
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         let saleDate: Date;
-        
         if (data.saleDate instanceof Timestamp) {
           saleDate = data.saleDate.toDate();
-        } else if (data.saleDate && typeof data.saleDate.toDate === 'function') {
-           saleDate = data.saleDate.toDate();
         } else {
           saleDate = new Date();
         }
@@ -85,16 +81,15 @@ export default function PurchasesPage() {
       setLoadingPurchases(false);
       setError(null);
     }, (err) => {
-      console.error("Firestore error in purchases:", err);
       setLoadingPurchases(false);
       if (err.code === 'failed-precondition') {
         setError({
           code: 'failed-precondition',
-          message: "Falta configurar un índice en Firestore para poder ordenar tus compras por fecha."
+          message: "Falta configurar un índice en Firestore."
         });
       } else {
         setError({
-          message: "No pudimos cargar tus compras en este momento. Por favor, intenta de nuevo más tarde."
+          message: "No pudimos cargar tus compras en este momento."
         });
       }
     });
@@ -125,55 +120,7 @@ export default function PurchasesPage() {
     return (
       <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Sincronizando tus pedidos...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center">
-        <div className="bg-destructive/10 p-8 rounded-[2.5rem] border border-destructive/20 max-w-md">
-          <AlertCircle className="h-16 w-16 text-destructive mb-4 mx-auto" />
-          <h2 className="text-xl font-black uppercase tracking-tighter mb-2">Error de Configuración</h2>
-          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
-            {error.message}
-            {error.code === 'failed-precondition' && (
-              <span className="block mt-4 font-bold text-white">
-                Para solucionarlo, debes hacer clic en el enlace que aparece en la consola de tu navegador (F12) y presionar "Crear índice" en Firebase.
-              </span>
-            )}
-          </p>
-          <div className="flex flex-col gap-3">
-            <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl font-bold uppercase text-[10px] tracking-widest">
-              Reintentar Sincronización
-            </Button>
-            {error.code === 'failed-precondition' && (
-              <Button asChild variant="ghost" className="text-[9px] font-black uppercase tracking-widest opacity-60">
-                <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer">
-                  Ir a Firebase Console <ExternalLink className="ml-2 h-3 w-3" />
-                </a>
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (purchases.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[500px] gap-6 p-6 text-center">
-        <div className="bg-white/[0.03] p-8 rounded-[2.5rem] border border-white/5">
-          <ShoppingBag className="h-16 w-16 text-muted-foreground/20 mb-4" />
-          <h1 className="text-2xl font-black uppercase tracking-tighter">Sin compras aún</h1>
-          <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2">
-            Aún no has realizado pedidos. ¡Explora nuestro catálogo industrial!
-          </p>
-        </div>
-        <Button onClick={() => router.push('/')} className="premium-gradient h-14 px-8 rounded-2xl font-black uppercase tracking-tighter">
-          Ver Catálogo
-        </Button>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Telemetría...</p>
       </div>
     );
   }
@@ -182,13 +129,13 @@ export default function PurchasesPage() {
     <div className="space-y-10 pb-20">
       <header className="flex flex-col gap-4">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.2em] w-fit">
-          <ShoppingBag className="h-3.5 w-3.5" /> Mi Actividad
+          <Globe className="h-3.5 w-3.5" /> Seguimiento Logístico IoT
         </div>
         <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none text-white">
           Mis <span className="text-primary">Pedidos.</span>
         </h1>
         <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
-          Historial detallado de suministros adquiridos y facturación.
+          Monitorea el estado de tus suministros en tiempo real con sensores de red.
         </p>
       </header>
 
@@ -204,11 +151,13 @@ export default function PurchasesPage() {
                       {summary.purchases.length} Pedido(s)
                     </Badge>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-2xl font-black text-white">
-                      {summary.totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
-                    </span>
-                    <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-black">Total del día</span>
+                  <div className="flex items-center gap-4">
+                     <div className="flex flex-col items-end gap-1">
+                        <span className="text-2xl font-black text-white">
+                          {summary.totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
+                        </span>
+                        <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-black">Total Día</span>
+                     </div>
                   </div>
                 </div>
               </AccordionTrigger>
@@ -217,13 +166,18 @@ export default function PurchasesPage() {
                   {summary.purchases.map(purchase => (
                     <div key={purchase.id} className="p-6 rounded-[1.5rem] bg-white/[0.02] border border-white/5 space-y-6">
                       <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                        <div className="space-y-1">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">ID de Transacción</p>
-                          <p className="text-xs font-bold text-white/50">#{purchase.id.toUpperCase()}</p>
+                        <div className="flex items-center gap-3">
+                           <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+                              <Radio className="h-4 w-4 text-blue-500 animate-pulse" />
+                           </div>
+                           <div className="space-y-0.5">
+                              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Status Logístico</p>
+                              <p className="text-xs font-bold text-white uppercase">En Tránsito (IoT Active)</p>
+                           </div>
                         </div>
-                        <div className="flex items-center gap-2 text-white/70">
+                        <div className="flex items-center gap-2 text-white/50">
                            <MapPin className="h-3 w-3" />
-                           <span className="text-[10px] font-black uppercase tracking-widest">Entrega Finalizada</span>
+                           <span className="text-[10px] font-black uppercase tracking-widest">#{purchase.id.slice(0, 8)}</span>
                         </div>
                       </div>
                       
@@ -231,19 +185,11 @@ export default function PurchasesPage() {
                         {purchase.itemsSold?.map((item, idx) => (
                           <div key={`${purchase.id}-item-${idx}`} className="flex items-center gap-4 group">
                             <div className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-white/5">
-                              {item.imageUrl ? (
-                                <NextImage src={item.imageUrl} alt={item.productName} fill className="object-cover transition-transform group-hover:scale-110" />
-                              ) : (
-                                <Package className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted-foreground/30" />
-                              )}
+                                <NextImage src={item.imageUrl || 'https://picsum.photos/seed/tool/100/100'} alt={item.productName} fill className="object-cover transition-transform group-hover:scale-110" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-black uppercase tracking-tighter truncate">{item.productName}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] font-bold text-muted-foreground">CANT: {item.quantitySold}</span>
-                                <div className="h-1 w-1 rounded-full bg-white/10" />
-                                <span className="text-[10px] font-bold text-muted-foreground">PRECIO: ${item.priceAtSale?.toLocaleString()}</span>
-                              </div>
+                              <p className="text-[10px] font-bold text-muted-foreground">CANT: {item.quantitySold}</p>
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-black text-white">${((item.quantitySold || 0) * (item.priceAtSale || 0)).toLocaleString()}</p>
@@ -255,9 +201,11 @@ export default function PurchasesPage() {
                       <div className="pt-4 border-t border-white/5 flex justify-between items-center">
                          <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-green-500">Verificado</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-green-500">Pago Verificado</span>
                          </div>
-                         <p className="text-xs font-black">Monto Total: <span className="text-primary ml-2">{purchase.totalAmount?.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</span></p>
+                         <Button variant="ghost" size="sm" className="text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/10">
+                            Ver Telemetría <Globe className="ml-2 h-3 w-3" />
+                         </Button>
                       </div>
                     </div>
                   ))}

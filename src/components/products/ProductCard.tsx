@@ -1,9 +1,10 @@
+
 import type { Product } from '@/types';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MinusCircle, ShieldCheck } from 'lucide-react';
+import { PlusCircle, MinusCircle, ShieldCheck, Zap, Radio } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface ProductCardProps {
@@ -52,6 +53,20 @@ export default function ProductCard({
             data-ai-hint="industrial product"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-60" />
+          
+          <div className="absolute top-3 left-3 flex flex-col gap-2">
+            {product.energyRating && (
+              <Badge className="bg-green-500/80 backdrop-blur-md border-none text-[9px] font-black">
+                <Zap className="h-2.5 w-2.5 mr-1" /> {product.energyRating}
+              </Badge>
+            )}
+            {product.isIotEnabled && (
+              <Badge className="bg-blue-500/80 backdrop-blur-md border-none text-[9px] font-black">
+                <Radio className="h-2.5 w-2.5 mr-1" /> IoT READY
+              </Badge>
+            )}
+          </div>
+
           {isOutOfStock && (
             <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex items-center justify-center">
               <Badge variant="destructive" className="uppercase tracking-tighter font-bold text-xs py-1">
@@ -100,16 +115,6 @@ export default function ProductCard({
             ) : (
               <><PlusCircle className="mr-2 h-4 w-4" /> {role === 'admin' ? 'Gestionar Venta' : 'Comprar Ahora'}</>
             )}
-          </Button>
-        )}
-        {!user && !isOutOfStock && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full font-bold uppercase tracking-tighter h-10 rounded-xl opacity-50"
-            disabled
-          >
-            Accede para Comprar
           </Button>
         )}
       </CardFooter>

@@ -6,8 +6,11 @@ export type Product = {
   price: number;
   quantity: number;
   imageUrl: string;
-  category?: string; // Optional: e.g., "tools", "paint", "fasteners"
-  arrivalDate?: Date; // Optional: to store the arrival date of the product
+  category?: string; 
+  arrivalDate?: Date;
+  energyRating?: 'A+++' | 'A++' | 'A' | 'B' | 'C'; // Nuevo: Clasificación energética
+  isIotEnabled?: boolean; // Nuevo: Si tiene sensores de monitoreo
+  iotSensorStatus?: 'online' | 'offline' | 'warning'; // Nuevo: Estado del sensor físico
 };
 
 export type SaleItem = {
@@ -17,24 +20,25 @@ export type SaleItem = {
   price: number;
   category?: string; 
   quantityToSell: number;
-  maxQuantity: number; // Original stock quantity when added to sale list
+  maxQuantity: number; 
 };
 
-// For storing in Firestore sale records
 export interface SoldItemDetails {
   productId: string;
-  productName: string; // Name at the time of sale
+  productName: string; 
   quantitySold: number;
-  priceAtSale: number; // Price per unit at the time of sale
+  priceAtSale: number; 
   category?: string;
-  imageUrl?: string; // Optional: if you want to display image in sales history details
+  imageUrl?: string; 
 }
 
 export interface SaleRecord {
-  id: string; // Firestore document ID
-  saleDate: Date; // Converted from Firestore Timestamp in the app
-  totalAmount: number; // Total for this specific sale transaction
-  totalItems: number; // Total items in this specific sale transaction
+  id: string; 
+  saleDate: Date; 
+  totalAmount: number; 
+  totalItems: number; 
   itemsSold: SoldItemDetails[];
-  userId?: string; // ID of the user who made the purchase
+  userId?: string; 
+  shippingStatus?: 'in_transit' | 'delivered' | 'processing'; // Nuevo: Seguimiento logístico
+  iotTrackingUrl?: string; // Nuevo: Enlace simulado a telemetría
 }
