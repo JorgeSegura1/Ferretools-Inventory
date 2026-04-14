@@ -1,0 +1,26 @@
+
+{
+  "featuredCollections": [
+    { "id": "elec", "name": "Herramientas Eléctricas", "count": 104, "image": "https://picsum.photos/seed/elec/200/200", "hint": "power tools" },
+    { "id": "inal", "name": "Herramientas Inalámbricas", "count": 156, "image": "https://picsum.photos/seed/inal/200/200", "hint": "cordless tools" },
+    { "id": "comb", "name": "Combos y Kits", "count": 71, "image": "https://picsum.photos/seed/comb/200/200", "hint": "tool kits" },
+    { "id": "manu", "name": "Herramientas Manuales", "count": 100, "image": "https://picsum.photos/seed/manu/200/200", "hint": "hand tools" },
+    { "id": "cons", "name": "Accesorios y Consumibles", "count": 158, "image": "https://picsum.photos/seed/cons/200/200", "hint": "drill bits" },
+    { "id": "segu", "name": "Seguridad Industrial", "count": 15, "image": "https://picsum.photos/seed/segu/200/200", "hint": "safety helmet" },
+    { "id": "sold", "name": "Soldadores", "count": 26, "image": "https://picsum.photos/seed/sold/200/200", "hint": "welding machine" },
+    { "id": "duch", "name": "Duchas Eléctricas", "count": 23, "image": "https://picsum.photos/seed/duch/200/200", "hint": "electric shower" },
+    { "id": "agro", "name": "Agro y Jardín", "count": 50, "image": "https://picsum.photos/seed/agro/200/200", "hint": "garden tools" },
+    { "id": "emto", "name": "Emtop", "count": 109, "image": "https://picsum.photos/seed/emto/200/200", "hint": "brand logo" }
+  ],
+  "shopByTrade": [
+    { "id": "carp", "name": "Para el Carpintero", "count": 104, "image": "https://picsum.photos/seed/carp/200/200", "hint": "woodworking tools" },
+    { "id": "obra", "name": "Para el Maestro de Obra", "count": 76, "image": "https://picsum.photos/seed/obra/200/200", "hint": "construction tools" },
+    { "id": "elec_t", "name": "Para el Electricista", "count": 82, "image": "https://picsum.photos/seed/elect/200/200", "hint": "electrician tools" },
+    { "id": "meca", "name": "Para el Mecánico", "count": 99, "image": "https://picsum.photos/seed/meca/200/200", "hint": "mechanic tools" },
+    { "id": "conv", "name": "Accesorios Especiales", "count": 24, "image": "https://picsum.photos/seed/spec/200/200", "hint": "special bits" },
+    { "id": "pint", "name": "Para Pintores", "count": 31, "image": "https://picsum.photos/seed/painter/200/200", "hint": "paint brushes" },
+    { "id": "hoga", "name": "Para el Hogar", "count": 42, "image": "https://picsum.photos/seed/home/200/200", "hint": "home repair" },
+    { "id": "bols", "name": "Bolsos y Organizadores", "count": 33, "image": "https://picsum.photos/seed/bag/200/200", "hint": "tool bag" },
+    { "id": "tota", "name": "Total", "count": 584, "image": "https://picsum.photos/seed/total/200/200", "hint": "industrial tools" }
+  ]
+}

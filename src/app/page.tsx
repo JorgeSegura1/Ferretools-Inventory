@@ -1,3 +1,4 @@
+
 "use client";
 
 import ProductList from '@/components/products/ProductList';
@@ -6,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Filter, ListTree, XIcon, ShoppingCart, Loader2, Sparkles, Search, BarChart3, TrendingUp, AlertCircle } from 'lucide-react';
+import { Filter, ListTree, XIcon, ShoppingCart, Loader2, Sparkles, Search, BarChart3, TrendingUp, AlertCircle, ChevronRight } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +31,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import type { Product, SaleItem } from '@/types';
+import Image from 'next/image';
+import placeholderData from '@/app/lib/placeholder-images.json';
 
 export default function HomePage() {
   const { products, loadingProducts, processSaleAndUpdateStock } = useProducts();
@@ -136,19 +140,87 @@ export default function HomePage() {
   return (
     <div className="space-y-12 pb-20">
       {/* Hero Section */}
-      <section className="relative py-16 px-8 rounded-[2.5rem] overflow-hidden border border-white/5 bg-gradient-to-br from-primary/20 via-background to-background shadow-2xl">
+      <section className="relative py-12 md:py-20 px-6 md:px-12 rounded-[2.5rem] overflow-hidden border border-white/5 bg-gradient-to-br from-primary/20 via-background to-background shadow-2xl">
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
         <div className="relative z-10 flex flex-col items-start gap-8 max-w-3xl">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.2em]">
             <Sparkles className="h-3.5 w-3.5" /> Estándar Industrial 4.0
           </div>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.9] text-white">
+          <h1 className="text-4xl md:text-7xl font-black tracking-tighter leading-[0.9] text-white">
             Infraestructura para <span className="text-primary italic">Líderes.</span>
           </h1>
-          <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
+          <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-xl">
             Optimiza tu cadena de suministro con tecnología de punta. Gestión inteligente de inventario y logística integral en un solo lugar.
           </p>
         </div>
+      </section>
+
+      {/* Featured Collections */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white">Colecciones Destacadas</h2>
+          <Button variant="link" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary">
+            Explorar Más <ChevronRight className="ml-1 h-3 w-3" />
+          </Button>
+        </div>
+        <ScrollArea className="w-full whitespace-nowrap pb-4">
+          <div className="flex space-x-4 md:space-x-6">
+            {placeholderData.featuredCollections.map((col) => (
+              <div key={col.id} className="inline-block group cursor-pointer w-32 md:w-40">
+                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105">
+                  <Image
+                    src={col.image}
+                    alt={col.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    data-ai-hint={col.hint}
+                  />
+                </div>
+                <div className="text-center px-1">
+                  <h3 className="text-[11px] md:text-[12px] font-black uppercase tracking-tighter text-white leading-tight mb-1 line-clamp-2">
+                    {col.name}
+                  </h3>
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{col.count} artículos</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" className="bg-white/5" />
+        </ScrollArea>
+      </section>
+
+      {/* Shop By Trade */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white">Compra Por Oficio</h2>
+          <Button variant="link" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary">
+            Ver Más <ChevronRight className="ml-1 h-3 w-3" />
+          </Button>
+        </div>
+        <ScrollArea className="w-full whitespace-nowrap pb-4">
+          <div className="flex space-x-4 md:space-x-6">
+            {placeholderData.shopByTrade.map((trade) => (
+              <div key={trade.id} className="inline-block group cursor-pointer w-32 md:w-40">
+                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105">
+                  <Image
+                    src={trade.image}
+                    alt={trade.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    data-ai-hint={trade.hint}
+                  />
+                </div>
+                <div className="text-center px-1">
+                  <h3 className="text-[11px] md:text-[12px] font-black uppercase tracking-tighter text-white leading-tight mb-1 line-clamp-2">
+                    {trade.name}
+                  </h3>
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{trade.count} artículos</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" className="bg-white/5" />
+        </ScrollArea>
       </section>
 
       {/* Admin Quick Stats */}
@@ -206,9 +278,9 @@ export default function HomePage() {
           <div className="flex gap-2 w-full md:w-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-14 border-white/10 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5">
+                <Button variant="outline" className="h-14 border-white/10 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5 flex-1 md:flex-none">
                   <ListTree className="mr-2 h-4 w-4" />
-                  {selectedCategory || "Sectores"}
+                  {selectedCategory || "Categoría"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="glass-card border-white/10 w-64 p-2">
@@ -223,7 +295,7 @@ export default function HomePage() {
 
             <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" className="h-14 border-white/10 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5">
+                <Button variant="outline" className="h-14 border-white/10 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5 flex-1 md:flex-none">
                   <Filter className="mr-2 h-4 w-4" /> Filtros
                 </Button>
               </SheetTrigger>
