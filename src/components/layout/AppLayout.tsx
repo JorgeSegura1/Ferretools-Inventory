@@ -1,9 +1,10 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, Bell, History, DollarSign, ListChecks } from 'lucide-react';
+import { LayoutGrid, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, History, DollarSign, ListChecks } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -156,7 +157,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             )}
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="ml-0 md:ml-64 bg-background">
+        <SidebarInset className="w-full bg-background">
           <main className="flex-1">
             <div className="max-w-7xl mx-auto p-4 md:p-8 lg:p-12">
               {children}
