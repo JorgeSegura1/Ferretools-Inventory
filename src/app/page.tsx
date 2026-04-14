@@ -1,3 +1,4 @@
+
 "use client";
 
 import ProductList from '@/components/products/ProductList';
@@ -6,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Filter, ListTree, XIcon, ShoppingCart, Loader2, Sparkles, Search } from 'lucide-react';
+import { Filter, ListTree, XIcon, ShoppingCart, Loader2, Sparkles, Search, BarChart3, TrendingUp, AlertCircle } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,7 @@ import SaleReviewSheet from '@/components/admin/SaleReviewSheet';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import { Card, CardContent } from '@/components/ui/card';
 import type { Product, SaleItem } from '@/types';
 
 export default function HomePage() {
@@ -66,6 +68,13 @@ export default function HomePage() {
       .map(product => product.category)
       .filter((category): category is string => !!category); 
     return [...new Set(categories)].sort();
+  }, [products]);
+
+  const stats = useMemo(() => {
+    const totalValue = products.reduce((acc, p) => acc + (p.price * p.quantity), 0);
+    const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= 5).length;
+    const outOfStock = products.filter(p => p.quantity === 0).length;
+    return { totalValue, lowStock, outOfStock };
   }, [products]);
 
   const filteredProducts = useMemo(() => {
@@ -126,98 +135,140 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 pb-20">
       {/* Hero Section */}
-      <section className="relative py-12 px-6 rounded-3xl overflow-hidden border border-white/5 bg-gradient-to-br from-primary/10 via-background to-background">
-        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary/20 blur-[100px] rounded-full" />
-        <div className="relative z-10 flex flex-col items-start gap-6 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest">
-            <Sparkles className="h-3 w-3" /> Innovación Industrial
+      <section className="relative py-16 px-8 rounded-[2.5rem] overflow-hidden border border-white/5 bg-gradient-to-br from-primary/20 via-background to-background shadow-2xl">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+        <div className="relative z-10 flex flex-col items-start gap-8 max-w-3xl">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.2em]">
+            <Sparkles className="h-3.5 w-3.5" /> Estándar Industrial 4.0
           </div>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none">
-            La Siguiente Generación de <span className="text-primary">Ferretería Profesional</span>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.9] text-white">
+            Infraestructura para <span className="text-primary italic">Líderes.</span>
           </h1>
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            Suministros de alto nivel para marcas serias. Gestión inteligente de inventario y despacho eficiente en toda Colombia.
+          <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
+            Optimiza tu cadena de suministro con tecnología de punta. Gestión inteligente de inventario y logística integral en un solo lugar.
           </p>
         </div>
       </section>
 
+      {/* Admin Quick Stats */}
+      {role === 'admin' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass-card border-white/5 bg-white/[0.02]">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="bg-primary/10 p-3 rounded-2xl">
+                <BarChart3 className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Valor Inventario</p>
+                <p className="text-2xl font-black text-white">{stats.totalValue.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card border-white/5 bg-white/[0.02]">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="bg-accent/10 p-3 rounded-2xl">
+                <TrendingUp className="h-6 w-6 text-accent" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Productos en Stock</p>
+                <p className="text-2xl font-black text-white">{products.filter(p => p.quantity > 0).length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card border-white/5 bg-white/[0.02] border-destructive/20">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="bg-destructive/10 p-3 rounded-2xl">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atención Crítica</p>
+                <p className="text-2xl font-black text-white">{stats.lowStock + stats.outOfStock} SKU</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Control Panel */}
-      <div className="sticky top-4 z-30 flex flex-col gap-6 p-6 glass-card rounded-2xl shadow-2xl">
+      <div className="sticky top-4 z-30 flex flex-col gap-6 p-6 glass-card rounded-2xl shadow-2xl border-white/10">
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Buscar por referencia o nombre..."
+              placeholder="Buscar por referencia o nombre técnico..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-12 bg-white/5 border-white/10 rounded-xl focus:ring-primary"
+              className="pl-12 h-14 bg-white/[0.03] border-white/10 rounded-2xl focus:ring-primary text-sm font-medium"
             />
           </div>
           <div className="flex gap-2 w-full md:w-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-12 border-white/10 px-6 rounded-xl font-bold uppercase text-[10px] tracking-widest">
+                <Button variant="outline" className="h-14 border-white/10 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5">
                   <ListTree className="mr-2 h-4 w-4" />
-                  {selectedCategory || "Categorías"}
+                  {selectedCategory || "Sectores"}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="glass-card border-white/10 w-56">
-                <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Filtrar por sector</DropdownMenuLabel>
+              <DropdownMenuContent className="glass-card border-white/10 w-64 p-2">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Especialidad</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/5" />
-                <DropdownMenuItem onClick={() => setSelectedCategory(null)} className="rounded-lg">Todas</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSelectedCategory(null)} className="rounded-xl py-3 font-medium">Todas las Categorías</DropdownMenuItem>
                 {allCategories.map(cat => (
-                  <DropdownMenuItem key={cat} onClick={() => setSelectedCategory(cat)} className="rounded-lg">{cat}</DropdownMenuItem>
+                  <DropdownMenuItem key={cat} onClick={() => setSelectedCategory(cat)} className="rounded-xl py-3 font-medium">{cat}</DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
             <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" className="h-12 border-white/10 px-6 rounded-xl font-bold uppercase text-[10px] tracking-widest">
+                <Button variant="outline" className="h-14 border-white/10 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5">
                   <Filter className="mr-2 h-4 w-4" /> Filtros
                 </Button>
               </SheetTrigger>
-              <SheetContent className="glass-card border-none">
-                <SheetHeader>
-                  <SheetTitle className="text-2xl font-black uppercase tracking-tighter">Refinar Selección</SheetTitle>
-                  <SheetDescription>Ajusta los parámetros para encontrar el equipo ideal.</SheetDescription>
+              <SheetContent className="glass-card border-none w-full sm:max-w-md">
+                <SheetHeader className="mb-8">
+                  <SheetTitle className="text-3xl font-black uppercase tracking-tighter">Parámetros</SheetTitle>
+                  <SheetDescription className="text-sm">Ajusta la búsqueda de suministros específicos.</SheetDescription>
                 </SheetHeader>
-                <div className="grid gap-8 py-8">
-                  <div className="space-y-4">
-                    <Label className="text-xs font-bold uppercase tracking-widest text-primary">Disponibilidad</Label>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
+                <div className="grid gap-10 py-4">
+                  <div className="space-y-6">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Disponibilidad de Almacén</Label>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5">
                         <Checkbox id="inStock" checked={showInStockOnly} onCheckedChange={v => setShowInStockOnly(!!v)} />
-                        <Label htmlFor="inStock" className="text-sm font-medium">Solo en Stock</Label>
+                        <Label htmlFor="inStock" className="text-sm font-bold cursor-pointer">Unidades Disponibles</Label>
                       </div>
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-4 p-4 rounded-2xl bg-white/[0.03] border border-white/5">
                         <Checkbox id="outOfStock" checked={showOutOfStockOnly} onCheckedChange={v => setShowOutOfStockOnly(!!v)} />
-                        <Label htmlFor="outOfStock" className="text-sm font-medium">Solo Agotados</Label>
+                        <Label htmlFor="outOfStock" className="text-sm font-bold cursor-pointer">Sin Stock / Bajo Pedido</Label>
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <Label className="text-xs font-bold uppercase tracking-widest text-primary">Rango de Precio (COP)</Label>
-                    <Slider
-                      min={minMaxPrice[0]}
-                      max={minMaxPrice[1]}
-                      step={1000}
-                      value={currentPriceRange}
-                      onValueChange={v => setCurrentPriceRange(v as [number, number])}
-                    />
-                    <div className="flex justify-between text-[10px] font-bold text-muted-foreground">
-                      <span>${currentPriceRange[0].toLocaleString()}</span>
-                      <span>${currentPriceRange[1].toLocaleString()}</span>
+                  <div className="space-y-6">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Margen de Inversión (COP)</Label>
+                    <div className="px-2">
+                      <Slider
+                        min={minMaxPrice[0]}
+                        max={minMaxPrice[1]}
+                        step={1000}
+                        value={currentPriceRange}
+                        onValueChange={v => setCurrentPriceRange(v as [number, number])}
+                        className="my-6"
+                      />
+                    </div>
+                    <div className="flex justify-between text-[11px] font-black text-muted-foreground bg-white/[0.03] p-3 rounded-xl border border-white/5">
+                      <span className="text-white">${currentPriceRange[0].toLocaleString()}</span>
+                      <span className="text-white">${currentPriceRange[1].toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
-                <SheetFooter>
-                   <Button onClick={resetAllFilters} variant="ghost" className="w-full text-xs font-bold uppercase">Limpiar Todo</Button>
+                <SheetFooter className="mt-12 flex-col gap-3">
+                   <Button onClick={resetAllFilters} variant="ghost" className="w-full text-xs font-black uppercase tracking-widest">Restablecer</Button>
                    <SheetClose asChild>
-                     <Button className="w-full h-12 rounded-xl font-black uppercase tracking-tighter">Aplicar Cambios</Button>
+                     <Button className="w-full h-14 rounded-2xl font-black uppercase tracking-tighter shadow-lg shadow-primary/20">Aplicar Filtros</Button>
                    </SheetClose>
                 </SheetFooter>
               </SheetContent>
@@ -228,16 +279,16 @@ export default function HomePage() {
         <div className="flex items-center justify-between">
           <div className="flex gap-2">
             {(searchTerm || selectedCategory) && (
-              <Button onClick={resetAllFilters} variant="link" className="text-xs h-auto p-0 text-primary font-bold uppercase tracking-widest">
-                <XIcon className="mr-1 h-3 w-3" /> Borrar Búsqueda
+              <Button onClick={resetAllFilters} variant="link" className="text-xs h-auto p-0 text-primary font-black uppercase tracking-[0.1em]">
+                <XIcon className="mr-2 h-3.5 w-3.5" /> Limpiar búsqueda
               </Button>
             )}
           </div>
           {role === 'admin' && saleItems.length > 0 && (
-            <Button onClick={() => setIsSaleSheetOpen(true)} className="relative premium-gradient border-none rounded-xl h-12 px-6 font-black uppercase tracking-tighter shadow-lg shadow-primary/20 transition-transform active:scale-95">
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Ver Carrito
-              <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-white text-[10px] font-black border-2 border-background">
+            <Button onClick={() => setIsSaleSheetOpen(true)} className="relative premium-gradient border-none rounded-2xl h-14 px-8 font-black uppercase tracking-tighter shadow-xl shadow-primary/30 transition-all hover:scale-105 active:scale-95">
+              <ShoppingCart className="mr-3 h-5 w-5" />
+              Revisar Despacho
+              <span className="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full bg-accent text-white text-[11px] font-black border-[3px] border-background shadow-lg">
                 {saleItems.length}
               </span>
             </Button>
@@ -247,14 +298,15 @@ export default function HomePage() {
 
       {/* Grid Section */}
       {loadingProducts && products.length === 0 ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <div className="flex flex-col items-center justify-center py-32 gap-4">
+          <Loader2 className="h-14 w-14 animate-spin text-primary" />
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Sincronizando Base de Datos</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
-              Catálogo de Expertos / {filteredProducts.length} Resultados
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2">
+              <div className="w-8 h-px bg-muted-foreground/30" /> Catálogo Industrial / {filteredProducts.length} SKU encontrados
             </h2>
           </div>
           <ProductList 
