@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -67,4 +68,13 @@
 
 .text-gradient {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+}
+
+/* Ocultar scrollbar pero permitir scroll */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

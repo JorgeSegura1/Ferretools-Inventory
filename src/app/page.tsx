@@ -5,7 +5,7 @@ import ProductList from '@/components/products/ProductList';
 import { useProducts } from '@/context/ProductContext';
 import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Filter, ListTree, XIcon, ShoppingCart, Loader2, Sparkles, Search, BarChart3, TrendingUp, AlertCircle, ChevronRight } from 'lucide-react';
 import {
@@ -31,10 +31,11 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { ScrollBar } from '@/components/ui/scroll-area';
 import type { Product, SaleItem } from '@/types';
 import Image from 'next/image';
 import placeholderData from '@/app/lib/placeholder-images.json';
+import { cn } from '@/lib/utils';
 
 export default function HomePage() {
   const { products, loadingProducts, processSaleAndUpdateStock } = useProducts();
@@ -51,6 +52,10 @@ export default function HomePage() {
   const [isSaleSheetOpen, setIsSaleSheetOpen] = useState(false);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [isProcessingSale, setIsProcessingSale] = useState(false);
+
+  // Refs for drag-to-scroll
+  const featuredRef = useRef<HTMLDivElement>(null);
+  const tradeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (products.length > 0) {
@@ -137,6 +142,34 @@ export default function HomePage() {
     setIsProcessingSale(false);
   };
 
+  // Logic for drag-to-scroll
+  const handleDragScroll = (e: React.MouseEvent, ref: React.RefObject<HTMLDivElement | null>) => {
+    const ele = ref.current;
+    if (!ele) return;
+    
+    const startPos = {
+      left: ele.scrollLeft,
+      x: e.clientX,
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      const dx = e.clientX - startPos.x;
+      ele.scrollLeft = startPos.left - dx;
+      ele.style.cursor = 'grabbing';
+      ele.style.userSelect = 'none';
+    };
+
+    const onMouseUp = () => {
+      ele.style.cursor = 'grab';
+      ele.style.removeProperty('user-select');
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
   return (
     <div className="space-y-12 pb-20">
       {/* Hero Section */}
@@ -155,7 +188,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Control Panel - MOVIDO HACIA ARRIBA PARA MEJOR UX */}
+      {/* Control Panel */}
       <div className="sticky top-4 z-30 flex flex-col gap-6 p-6 glass-card rounded-2xl shadow-2xl border-white/10">
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="relative w-full">
@@ -260,7 +293,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Admin Quick Stats - MOVIDO HACIA ARRIBA TAMBIÉN */}
+      {/* Admin Quick Stats */}
       {role === 'admin' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="glass-card border-white/5 bg-white/[0.02]">
@@ -307,15 +340,20 @@ export default function HomePage() {
             Explorar Más <ChevronRight className="ml-1 h-3 w-3" />
           </Button>
         </div>
-        <ScrollArea className="w-full whitespace-nowrap pb-4">
+        <div 
+          ref={featuredRef}
+          onMouseDown={(e) => handleDragScroll(e, featuredRef)}
+          className="w-full overflow-x-auto whitespace-nowrap pb-4 scrollbar-hide cursor-grab active:cursor-grabbing select-none"
+        >
           <div className="flex space-x-4 md:space-x-6">
             {placeholderData.featuredCollections.map((col) => (
-              <div key={col.id} className="inline-block group cursor-pointer w-32 md:w-40">
-                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105">
+              <div key={col.id} className="inline-block group cursor-pointer w-32 md:w-40 shrink-0">
+                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105 pointer-events-none">
                   <Image
                     src={col.image}
                     alt={col.name}
                     fill
+                    draggable={false}
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                     data-ai-hint={col.hint}
                   />
@@ -329,8 +367,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <ScrollBar orientation="horizontal" className="bg-white/5" />
-        </ScrollArea>
+        </div>
       </section>
 
       {/* Shop By Trade */}
@@ -341,15 +378,20 @@ export default function HomePage() {
             Ver Más <ChevronRight className="ml-1 h-3 w-3" />
           </Button>
         </div>
-        <ScrollArea className="w-full whitespace-nowrap pb-4">
+        <div 
+          ref={tradeRef}
+          onMouseDown={(e) => handleDragScroll(e, tradeRef)}
+          className="w-full overflow-x-auto whitespace-nowrap pb-4 scrollbar-hide cursor-grab active:cursor-grabbing select-none"
+        >
           <div className="flex space-x-4 md:space-x-6">
             {placeholderData.shopByTrade.map((trade) => (
-              <div key={trade.id} className="inline-block group cursor-pointer w-32 md:w-40">
-                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105">
+              <div key={trade.id} className="inline-block group cursor-pointer w-32 md:w-40 shrink-0">
+                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105 pointer-events-none">
                   <Image
                     src={trade.image}
                     alt={trade.name}
                     fill
+                    draggable={false}
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                     data-ai-hint={trade.hint}
                   />
@@ -363,8 +405,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <ScrollBar orientation="horizontal" className="bg-white/5" />
-        </ScrollArea>
+        </div>
       </section>
 
       {/* Grid Section */}
