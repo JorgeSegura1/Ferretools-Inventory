@@ -7,13 +7,14 @@ import type { SaleRecord } from '@/types';
 import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, ShoppingBag, Calendar, Package, ChevronRight, MapPin } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, ShoppingBag, Calendar, Package, MapPin, AlertCircle } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import NextImage from 'next/image';
+import { Button } from '@/components/ui/button';
 
-function formatDateForGroupingKey(date: Date): string {
+function formatDateForGroupingKey(date: Date | null | undefined): string {
+  if (!date) return 'unknown';
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -21,6 +22,7 @@ function formatDateForGroupingKey(date: Date): string {
 }
 
 function formatDisplayDate(dateKey: string): string {
+  if (dateKey === 'unknown') return 'Fecha No Definida';
   const [year, month, day] = dateKey.split('-');
   const date = new Date(Number(year), Number(month) - 1, Number(day));
   return date.toLocaleDateString('es-ES', {
@@ -43,6 +45,7 @@ export default function PurchasesPage() {
   const router = useRouter();
   const [purchases, setPurchases] = useState<SaleRecord[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -51,6 +54,7 @@ export default function PurchasesPage() {
       return;
     }
 
+    // CRITICAL: Esta consulta requiere un índice compuesto en Firestore
     const purchasesQuery = query(
       collection(db, 'sales'),
       where('userId', '==', user.uid),
@@ -61,13 +65,32 @@ export default function PurchasesPage() {
       const purchasesData: SaleRecord[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        let saleDate: Date;
+        
+        if (data.saleDate instanceof Timestamp) {
+          saleDate = data.saleDate.toDate();
+        } else if (data.saleDate && typeof data.saleDate.toDate === 'function') {
+           saleDate = data.saleDate.toDate();
+        } else {
+          saleDate = new Date();
+        }
+
         purchasesData.push({
           id: doc.id,
           ...data,
-          saleDate: (data.saleDate as Timestamp).toDate(),
+          saleDate,
         } as SaleRecord);
       });
       setPurchases(purchasesData);
+      setLoadingPurchases(false);
+      setError(null);
+    }, (err) => {
+      console.error("Firestore error in purchases:", err);
+      if (err.code === 'failed-precondition') {
+        setError("Falta configurar un índice en la base de datos. Por favor, contacta al administrador o revisa la consola para el enlace de creación.");
+      } else {
+        setError("No pudimos cargar tus compras en este momento.");
+      }
       setLoadingPurchases(false);
     });
 
@@ -86,8 +109,8 @@ export default function PurchasesPage() {
           purchases: [],
         };
       }
-      groupedByDay[dateKey].totalAmount += purchase.totalAmount;
-      groupedByDay[dateKey].totalItems += purchase.totalItems;
+      groupedByDay[dateKey].totalAmount += purchase.totalAmount || 0;
+      groupedByDay[dateKey].totalItems += purchase.totalItems || 0;
       groupedByDay[dateKey].purchases.push(purchase);
     });
     return Object.values(groupedByDay).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
@@ -97,7 +120,18 @@ export default function PurchasesPage() {
     return (
       <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Recuperando tus pedidos...</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Sincronizando tus pedidos...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center">
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-xl font-bold mb-2">Ops! Algo salió mal</h2>
+        <p className="text-muted-foreground text-sm max-w-md mb-6">{error}</p>
+        <Button onClick={() => window.location.reload()} variant="outline">Reintentar</Button>
       </div>
     );
   }
@@ -109,15 +143,12 @@ export default function PurchasesPage() {
           <ShoppingBag className="h-16 w-16 text-muted-foreground/20 mb-4" />
           <h1 className="text-2xl font-black uppercase tracking-tighter">Sin compras aún</h1>
           <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-2">
-            Tu historial está vacío. ¡Explora nuestro catálogo y equipa tu proyecto hoy mismo!
+            Aún no has realizado pedidos. ¡Explora nuestro catálogo industrial!
           </p>
         </div>
-        <button 
-          onClick={() => router.push('/')}
-          className="premium-gradient px-8 py-4 rounded-2xl font-black uppercase tracking-tighter text-sm shadow-xl shadow-primary/20"
-        >
-          Ir al Catálogo
-        </button>
+        <Button onClick={() => router.push('/')} className="premium-gradient h-14 px-8 rounded-2xl font-black uppercase tracking-tighter">
+          Ver Catálogo
+        </Button>
       </div>
     );
   }
@@ -129,19 +160,14 @@ export default function PurchasesPage() {
           <ShoppingBag className="h-3.5 w-3.5" /> Mi Actividad
         </div>
         <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none text-white">
-          Historial de <span className="text-primary">Compras.</span>
+          Mis <span className="text-primary">Pedidos.</span>
         </h1>
         <p className="text-muted-foreground text-sm md:text-base max-w-2xl">
-          Consulta el registro detallado de tus suministros adquiridos y el estado de tus transacciones.
+          Historial detallado de suministros adquiridos y facturación.
         </p>
       </header>
 
       <div className="space-y-6">
-        <div className="flex items-center gap-3 px-2">
-          <Calendar className="h-4 w-4 text-primary" />
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Registro Cronológico</h2>
-        </div>
-
         <Accordion type="multiple" className="space-y-4">
           {dailySummaries.map((summary) => (
             <AccordionItem value={summary.dateKey} key={summary.dateKey} className="glass-card rounded-[2rem] border-white/5 overflow-hidden border">
@@ -149,17 +175,15 @@ export default function PurchasesPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-6 text-left">
                   <div className="space-y-1">
                     <span className="text-xl font-black uppercase tracking-tighter">{formatDisplayDate(summary.dateKey)}</span>
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest border-primary/20 text-primary px-3 py-1">
-                        {summary.purchases.length} Pedidos
-                      </Badge>
-                    </div>
+                    <Badge variant="outline" className="text-[9px] uppercase font-black tracking-widest border-primary/20 text-primary px-3 py-1">
+                      {summary.purchases.length} Pedido(s)
+                    </Badge>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className="text-2xl font-black text-white">
                       {summary.totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
                     </span>
-                    <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-black">Total Invertido</span>
+                    <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-black">Total del día</span>
                   </div>
                 </div>
               </AccordionTrigger>
@@ -169,18 +193,18 @@ export default function PurchasesPage() {
                     <div key={purchase.id} className="p-6 rounded-[1.5rem] bg-white/[0.02] border border-white/5 space-y-6">
                       <div className="flex justify-between items-center border-b border-white/5 pb-4">
                         <div className="space-y-1">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Orden de Compra</p>
-                          <p className="text-xs font-bold text-white/50">#{purchase.id.slice(0, 12).toUpperCase()}</p>
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">ID de Transacción</p>
+                          <p className="text-xs font-bold text-white/50">#{purchase.id.toUpperCase()}</p>
                         </div>
                         <div className="flex items-center gap-2 text-white/70">
                            <MapPin className="h-3 w-3" />
-                           <span className="text-[10px] font-black uppercase tracking-widest">Entrega Programada</span>
+                           <span className="text-[10px] font-black uppercase tracking-widest">Entrega Finalizada</span>
                         </div>
                       </div>
                       
                       <div className="grid gap-4">
-                        {purchase.itemsSold.map(item => (
-                          <div key={item.productId} className="flex items-center gap-4 group">
+                        {purchase.itemsSold?.map((item, idx) => (
+                          <div key={`${purchase.id}-item-${idx}`} className="flex items-center gap-4 group">
                             <div className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-white/5">
                               {item.imageUrl ? (
                                 <NextImage src={item.imageUrl} alt={item.productName} fill className="object-cover transition-transform group-hover:scale-110" />
@@ -193,11 +217,11 @@ export default function PurchasesPage() {
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[10px] font-bold text-muted-foreground">CANT: {item.quantitySold}</span>
                                 <div className="h-1 w-1 rounded-full bg-white/10" />
-                                <span className="text-[10px] font-bold text-muted-foreground">UNID: ${item.priceAtSale.toLocaleString()}</span>
+                                <span className="text-[10px] font-bold text-muted-foreground">PRECIO: ${item.priceAtSale?.toLocaleString()}</span>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-black text-white">${(item.quantitySold * item.priceAtSale).toLocaleString()}</p>
+                              <p className="text-sm font-black text-white">${((item.quantitySold || 0) * (item.priceAtSale || 0)).toLocaleString()}</p>
                             </div>
                           </div>
                         ))}
@@ -206,9 +230,9 @@ export default function PurchasesPage() {
                       <div className="pt-4 border-t border-white/5 flex justify-between items-center">
                          <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-green-500">Completado</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-green-500">Verificado</span>
                          </div>
-                         <p className="text-xs font-black">Total Pedido: <span className="text-primary ml-2">{purchase.totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</span></p>
+                         <p className="text-xs font-black">Monto Total: <span className="text-primary ml-2">{purchase.totalAmount?.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</span></p>
                       </div>
                     </div>
                   ))}

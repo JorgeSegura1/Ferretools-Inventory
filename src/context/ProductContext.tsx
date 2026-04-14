@@ -31,8 +31,8 @@ import { generateProductImage } from '@/ai/flows/generate-product-image-flow';
 
 interface ProductDetailsUpdateData {
   quantity: number;
-  newImageUrl?: string;      // URL from form input or empty
-  generateNewImage?: boolean; // From checkbox
+  newImageUrl?: string;      
+  generateNewImage?: boolean; 
 }
 
 interface ProductContextType {
@@ -53,28 +53,17 @@ const SALES_COLLECTION = 'sales';
 
 function dataURItoBlob(dataURI: string): Blob {
   if (!dataURI.includes(',')) {
-    throw new Error('Invalid data URI for blob conversion: missing comma separator.');
+    throw new Error('Invalid data URI');
   }
   const [metadata, base64Data] = dataURI.split(',');
-  if (!metadata || !base64Data) {
-    throw new Error('Malformed data URI for blob conversion: could not split metadata and base64 data.');
-  }
   const mimeString = metadata.split(':')[1]?.split(';')[0];
-  if (!mimeString) {
-    throw new Error('Could not extract mimeType from data URI metadata.');
+  const byteString = atob(base64Data);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
   }
-
-  try {
-    const byteString = atob(base64Data);
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([ab], { type: mimeString });
-  } catch (e) {
-    throw new Error(`Error converting base64 to Blob: ${(e as Error).message}`);
-  }
+  return new Blob([ab], { type: mimeString });
 }
 
 export const ProductProvider = ({ children }: { children: ReactNode }) => {
@@ -95,118 +84,50 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
           arrivalDate = data.arrivalDate.toDate();
         }
 
-        const quantity = (typeof data.quantity === 'number' && !isNaN(data.quantity)) ? data.quantity : 0;
-        const price = (typeof data.price === 'number' && !isNaN(data.price)) ? data.price : 0;
-
         productsData.push({
           id: docSnapshot.id,
           ...data,
-          quantity,
-          price,
+          quantity: data.quantity || 0,
+          price: data.price || 0,
           arrivalDate
         } as Product);
       });
       setProducts(productsData);
       setLoadingProducts(false);
     }, (error) => {
-      let firestoreErrorMessage = "No se pudieron obtener los datos del inventario.";
-      if (error && typeof error === 'object' && 'code' in error) {
-        firestoreErrorMessage += ` Código: ${(error as {code: string}).code}`;
-      }
-      toast({
-        title: "Error al cargar productos",
-        description: firestoreErrorMessage,
-        variant: "destructive",
-      });
+      console.error(error);
       setLoadingProducts(false);
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, []);
 
   const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'arrivalDate'>) => {
     setLoadingProducts(true);
     let imageUrlToSave = productData.imageUrl;
 
-    if (productData.imageUrl && productData.imageUrl.startsWith('data:image')) {
-      toast({ title: "Procesando imagen generada...", description: "Subiendo a Firebase Storage..." });
+    if (productData.imageUrl?.startsWith('data:image')) {
       try {
         const blob = dataURItoBlob(productData.imageUrl);
-        const imageName = `product_${Date.now()}_${productData.name.replace(/\s+/g, '_').toLowerCase()}.png`;
-        const storageRefPath = `product-images/${imageName}`;
-        const imageRef = storageFirebaseRef(storage, storageRefPath);
-
+        const imageName = `product_${Date.now()}.png`;
+        const imageRef = storageFirebaseRef(storage, `product-images/${imageName}`);
         await uploadBytesResumable(imageRef, blob);
         imageUrlToSave = await getDownloadURL(imageRef);
-        toast({ title: "Imagen Subida", description: "La imagen generada se guardó en Storage.", variant: "default" });
       } catch (error) {
-        let storageErrorMessage = "No se pudo guardar la imagen generada. Se usará un marcador.";
-        if (error && typeof error === 'object' && 'code' in error) {
-            storageErrorMessage += ` Código: ${(error as FirebaseStorageError).code}.`;
-        } else if (error instanceof Error) {
-            storageErrorMessage += ` Detalle: ${error.message}`;
-        }
-        toast({
-          title: "Error al subir imagen de IA",
-          description: storageErrorMessage,
-          variant: "destructive"
-        });
+        console.error(error);
         imageUrlToSave = 'https://placehold.co/300x200.png';
       }
-    } else if (!productData.imageUrl) {
-      imageUrlToSave = 'https://placehold.co/300x200.png';
     }
 
-    const q = query(collection(db, PRODUCTS_COLLECTION), where("name", "==", productData.name), limit(1));
-
     try {
-      const querySnapshot = await getDocs(q);
-      const productDocRef = !querySnapshot.empty ? querySnapshot.docs[0].ref : null;
-
-      if (productDocRef) {
-        const existingProductData = querySnapshot.docs[0].data();
-        const currentQuantity = (typeof existingProductData.quantity === 'number' && !isNaN(existingProductData.quantity))
-                                ? existingProductData.quantity
-                                : 0;
-        const newPrice = (typeof productData.price === 'number' && !isNaN(productData.price)) ? productData.price : (typeof existingProductData.price === 'number' && !isNaN(existingProductData.price) ? existingProductData.price : 0);
-        const newQuantityToAdd = (typeof productData.quantity === 'number' && !isNaN(productData.quantity)) ? productData.quantity : 0;
-
-        const updatedProductFields = {
-          name: productData.name,
-          description: productData.description,
-          price: newPrice,
-          quantity: currentQuantity + newQuantityToAdd,
-          category: productData.category,
-          imageUrl: imageUrlToSave,
-          arrivalDate: serverTimestamp()
-        };
-        await updateDoc(productDocRef, updatedProductFields);
-        toast({ title: "Producto Actualizado", description: `"${productData.name}" actualizado: cantidad sumada y detalles actualizados.`});
-      } else {
-        const priceToAdd = (typeof productData.price === 'number' && !isNaN(productData.price)) ? productData.price : 0;
-        const quantityToAdd = (typeof productData.quantity === 'number' && !isNaN(productData.quantity)) ? productData.quantity : 0;
-        await addDoc(collection(db, PRODUCTS_COLLECTION), {
-          ...productData,
-          price: priceToAdd,
-          quantity: quantityToAdd,
-          imageUrl: imageUrlToSave,
-          arrivalDate: serverTimestamp()
-        });
-        toast({ title: "Producto Agregado", description: `"${productData.name}" se agregó exitosamente.`});
-      }
-    } catch (error) {
-      let firestoreErrorMessage = "No se pudo guardar o actualizar el producto.";
-      if (error && typeof error === 'object' && 'code' in error) {
-        firestoreErrorMessage += ` Código: ${(error as {code: string}).code}`;
-      } else if (error instanceof Error) {
-        firestoreErrorMessage += ` Detalle: ${error.message}`;
-      }
-      toast({
-        title: "Error en base de datos",
-        description: firestoreErrorMessage,
-        variant: "destructive",
+      await addDoc(collection(db, PRODUCTS_COLLECTION), {
+        ...productData,
+        imageUrl: imageUrlToSave,
+        arrivalDate: serverTimestamp()
       });
-      throw new Error(`Firestore error handled by context: ${firestoreErrorMessage}`);
+      toast({ title: "Producto Agregado" });
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoadingProducts(false);
     }
@@ -215,267 +136,97 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
   const updateProductQuantity = useCallback(async (productId: string, newQuantity: number) => {
     const productRef = doc(db, PRODUCTS_COLLECTION, productId);
     try {
-      const quantityToUpdate = (typeof newQuantity === 'number' && !isNaN(newQuantity)) ? Math.max(0, newQuantity) : 0;
-      await updateDoc(productRef, {
-        quantity: quantityToUpdate
-      });
+      await updateDoc(productRef, { quantity: newQuantity });
     } catch (error) {
-      let updateErrorMessage = "No se pudo actualizar la cantidad del producto.";
-       if (error && typeof error === 'object' && 'code' in error) {
-        updateErrorMessage += ` Código: ${(error as {code: string}).code}`;
-      }
-      toast({
-        title: "Error al actualizar cantidad",
-        description: updateErrorMessage,
-        variant: "destructive",
-      });
-      throw new Error(`Firestore error handled by context: ${updateErrorMessage}`);
+      console.error(error);
     }
-  }, [toast]);
+  }, []);
 
   const updateProductDetails = useCallback(async (productId: string, data: ProductDetailsUpdateData) => {
     setLoadingProducts(true);
     const productRef = doc(db, PRODUCTS_COLLECTION, productId);
-
-    const sanitizedQuantity = (typeof data.quantity === 'number' && !isNaN(data.quantity)) ? Math.max(0, data.quantity) : 0;
-    const fieldsToUpdate: { quantity: number; imageUrl?: string } = {
-        quantity: sanitizedQuantity
-    };
-    let finalImageUrl: string | undefined = undefined;
-
     try {
-      const productSnap = await getDoc(productRef);
-      if (!productSnap.exists()) {
-        toast({ title: "Error", description: "El producto no existe.", variant: "destructive" });
-        throw new Error("Product not found");
-      }
-      const existingProduct = productSnap.data() as Product;
-      finalImageUrl = existingProduct.imageUrl;
-
-      if (data.generateNewImage && (!data.newImageUrl || data.newImageUrl.trim() === '')) {
-        toast({ title: "Generando nueva imagen con IA...", description: "Esto puede tomar unos segundos." });
+      let imageUrl = data.newImageUrl;
+      if (data.generateNewImage) {
+        const productSnap = await getDoc(productRef);
+        const product = productSnap.data();
         const genOutput = await generateProductImage({
-          productName: existingProduct.name,
-          productDescription: existingProduct.description
+          productName: product?.name || '',
+          productDescription: product?.description || ''
         });
-
         if (genOutput?.imageDataUri) {
           const blob = dataURItoBlob(genOutput.imageDataUri);
-          const imageName = `product_${Date.now()}_${existingProduct.name.replace(/\s+/g, '_').toLowerCase()}.png`;
+          const imageName = `product_${Date.now()}.png`;
           const imageFileRef = storageFirebaseRef(storage, `product-images/${imageName}`);
           await uploadBytesResumable(imageFileRef, blob);
-          finalImageUrl = await getDownloadURL(imageFileRef);
-          toast({ title: "Nueva imagen IA generada y subida.", variant: "default" });
-        } else {
-          toast({ title: "Error al generar imagen IA", description: "No se pudo generar la imagen. La imagen actual no se cambiará.", variant: "destructive" });
-        }
-      } else if (data.newImageUrl && data.newImageUrl.trim() !== '' && data.newImageUrl !== existingProduct.imageUrl) {
-        if (data.newImageUrl.startsWith('data:image')) {
-          toast({ title: "Procesando imagen data URI..." });
-          const blob = dataURItoBlob(data.newImageUrl);
-          const imageName = `product_${Date.now()}_${existingProduct.name.replace(/\s+/g, '_').toLowerCase()}.png`;
-          const imageFileRef = storageFirebaseRef(storage, `product-images/${imageName}`);
-          await uploadBytesResumable(imageFileRef, blob);
-          finalImageUrl = await getDownloadURL(imageFileRef);
-          toast({ title: "Imagen Data URI subida.", variant: "default" });
-        } else {
-          finalImageUrl = data.newImageUrl;
+          imageUrl = await getDownloadURL(imageFileRef);
         }
       }
 
-      if (finalImageUrl && finalImageUrl !== existingProduct.imageUrl) {
-        fieldsToUpdate.imageUrl = finalImageUrl;
-      }
+      const updateData: any = { quantity: data.quantity };
+      if (imageUrl) updateData.imageUrl = imageUrl;
 
-      if (Object.keys(fieldsToUpdate).length > 1 || fieldsToUpdate.quantity !== existingProduct.quantity || (fieldsToUpdate.imageUrl && fieldsToUpdate.imageUrl !== existingProduct.imageUrl) ) {
-        await updateDoc(productRef, fieldsToUpdate);
-        toast({ title: "Producto Actualizado", description: `Los detalles de "${existingProduct.name}" han sido actualizados.` });
-      } else {
-         toast({ title: "Sin Cambios", description: "No se especificaron cambios para el producto." });
-      }
-
+      await updateDoc(productRef, updateData);
+      toast({ title: "Producto Actualizado" });
     } catch (error) {
-      let updateErrorMessage = "No se pudo actualizar el producto.";
-      if (error instanceof Error && error.message.startsWith("Product not found")) {
-        // Already handled by toast above
-      } else if (error && typeof error === 'object' && 'code' in error) {
-        updateErrorMessage += ` Código: ${(error as FirebaseStorageError).code}.`;
-      } else if (error instanceof Error) {
-        updateErrorMessage += ` Detalle: ${error.message}`;
-      }
-      toast({
-        title: "Error al actualizar producto",
-        description: updateErrorMessage,
-        variant: "destructive",
-      });
-      throw new Error(`Update error handled by context: ${updateErrorMessage}`);
+      console.error(error);
     } finally {
       setLoadingProducts(false);
     }
   }, [toast]);
 
   const deleteProduct = useCallback(async (productId: string) => {
-    setLoadingProducts(true);
-    const productRef = doc(db, PRODUCTS_COLLECTION, productId);
     try {
-      await deleteDoc(productRef);
-      toast({
-        title: "Producto Eliminado",
-        description: "El producto ha sido eliminado exitosamente del inventario.",
-      });
+      await deleteDoc(doc(db, PRODUCTS_COLLECTION, productId));
+      toast({ title: "Producto Eliminado" });
     } catch (error) {
-      let deleteErrorMessage = "No se pudo eliminar el producto.";
-      if (error && typeof error === 'object' && 'code' in error) {
-        deleteErrorMessage += ` Código: ${(error as {code: string}).code}`;
-      }
-      toast({
-        title: "Error al eliminar producto",
-        description: deleteErrorMessage,
-        variant: "destructive",
-      });
-      throw new Error(`Firestore error handled by context: ${deleteErrorMessage}`);
-    } finally {
-      setLoadingProducts(false);
+      console.error(error);
     }
   }, [toast]);
 
- const processSaleAndUpdateStock = useCallback(async (
-    itemsToSell: Array<Omit<SaleItem, 'maxQuantity'> & { priceAtSale: number, productName: string, quantitySold: number, category?: string, imageUrl?: string }>
-  ): Promise<boolean> => {
+  const processSaleAndUpdateStock = useCallback(async (itemsToSell: any[]): Promise<boolean> => {
     setLoadingProducts(true);
     const batch = writeBatch(db);
-    let successfulProcessing = true;
-    let errorMessage = "No se pudo completar la venta debido a un error desconocido.";
-
     const saleRecordItems: SoldItemDetails[] = [];
     let saleTotalAmount = 0;
     let saleTotalItems = 0;
-
-    const currentUserId = auth.currentUser?.uid;
+    const currentUserId = auth.currentUser?.uid || null;
 
     try {
       for (const item of itemsToSell) {
-        const quantityForSale = (typeof item.quantitySold === 'number' && !isNaN(item.quantitySold)) ? item.quantitySold : 0;
-
-        if (quantityForSale <= 0) {
-          continue; 
-        }
-
-        const currentProductIdValue = String(item.productId || '').trim();
-
-        if (!currentProductIdValue) {
-            errorMessage = `ID de producto inválido para "${item.productName || 'un artículo'}". La venta no puede continuar.`;
-            successfulProcessing = false;
-            toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
-            setLoadingProducts(false);
-            return false; 
-        }
-        
-        const productRef = doc(db, PRODUCTS_COLLECTION, currentProductIdValue);
+        const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
         const productSnap = await getDoc(productRef);
+        if (!productSnap.exists()) continue;
 
-        if (!productSnap.exists()) {
-          errorMessage = `Producto "${item.productName}" (ID: ${currentProductIdValue}) no encontrado en el inventario.`;
-          successfulProcessing = false;
-          toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
-          setLoadingProducts(false);
-          return false;
-        }
+        const currentStock = productSnap.data().quantity || 0;
+        batch.update(productRef, { quantity: currentStock - item.quantitySold });
 
-        const currentProductData = productSnap.data();
-        const currentQuantity = (typeof currentProductData.quantity === 'number' && !isNaN(currentProductData.quantity))
-                                ? currentProductData.quantity
-                                : 0;
+        saleRecordItems.push({
+          productId: item.productId,
+          productName: item.productName,
+          quantitySold: item.quantitySold,
+          priceAtSale: item.priceAtSale,
+          imageUrl: item.imageUrl?.startsWith('data:') ? null : item.imageUrl
+        });
 
-        if (currentQuantity < quantityForSale) {
-          errorMessage = `Stock insuficiente para "${item.productName}". Disponible: ${currentQuantity}, Solicitado: ${quantityForSale}.`;
-          successfulProcessing = false;
-          toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
-          setLoadingProducts(false);
-          return false;
-        }
-        const newQuantity = currentQuantity - quantityForSale;
-
-        if (isNaN(newQuantity)) {
-            errorMessage = `Error de cálculo de cantidad para "${item.productName}". La nueva cantidad (${newQuantity}) sería NaN. Stock actual: ${currentQuantity}, Cantidad a vender: ${quantityForSale}.`;
-            successfulProcessing = false;
-            toast({ title: "Error en Venta", description: errorMessage, variant: "destructive" });
-            setLoadingProducts(false);
-            return false;
-        }
-
-        batch.update(productRef, { quantity: Number(newQuantity) });
-
-        const priceForSale = (typeof item.priceAtSale === 'number' && !isNaN(item.priceAtSale)) ? item.priceAtSale : 0;
-
-        const soldItem: SoldItemDetails = {
-          productId: currentProductIdValue,
-          productName: item.productName || 'Nombre Desconocido',
-          quantitySold: quantityForSale,
-          priceAtSale: Number(priceForSale),
-        };
-        if (item.category) {
-          soldItem.category = item.category;
-        }
-        // Only store imageUrl if it's NOT a data URI to keep document size small
-        if (item.imageUrl && !item.imageUrl.startsWith('data:image')) {
-          soldItem.imageUrl = item.imageUrl;
-        }
-        saleRecordItems.push(soldItem);
-
-        saleTotalAmount += Number(priceForSale) * quantityForSale;
-        saleTotalItems += quantityForSale;
-      }
-      
-      if (!successfulProcessing) {
-        setLoadingProducts(false);
-        return false; 
+        saleTotalAmount += item.priceAtSale * item.quantitySold;
+        saleTotalItems += item.quantitySold;
       }
 
-      if (saleRecordItems.length > 0) {
-          await batch.commit();
-
-          const salesData = {
-            saleDate: serverTimestamp(),
-            totalAmount: Number(saleTotalAmount),
-            totalItems: Number(saleTotalItems),
-            itemsSold: saleRecordItems,
-            userId: currentUserId || null,
-          };
-          await addDoc(collection(db, SALES_COLLECTION), salesData);
-
-          toast({
-            title: "🎉 Compra Exitosa 🎉",
-            description: "El stock de los productos ha sido actualizado y la venta registrada.",
-          });
-          setLoadingProducts(false);
-          return true;
-      } else {
-          toast({
-              title: "Venta No Procesada",
-              description: "No se seleccionaron artículos válidos o cantidades para la venta.",
-              variant: "default", 
-          });
-          setLoadingProducts(false);
-          return false;
-      }
-    } catch (error) {
-      let finalErrorMessage = "Error crítico al procesar la venta.";
-      if (error instanceof Error && error.message) {
-        finalErrorMessage += ` Detalle SDK: ${error.message}`;
-      }
-      if (error && typeof error === 'object' && 'code' in error) {
-        const fbError = error as { code: string; message?: string };
-        finalErrorMessage += ` Código Firebase: ${fbError.code}.`;
-        if (fbError.message && !finalErrorMessage.includes(fbError.message)) {
-          finalErrorMessage += ` Mensaje Firebase: ${fbError.message}`;
-        }
-      }
-      toast({
-        title: "Error Crítico en Venta",
-        description: finalErrorMessage,
-        variant: "destructive",
+      await batch.commit();
+      await addDoc(collection(db, SALES_COLLECTION), {
+        saleDate: serverTimestamp(),
+        totalAmount: saleTotalAmount,
+        totalItems: saleTotalItems,
+        itemsSold: saleRecordItems,
+        userId: currentUserId,
       });
+
+      toast({ title: "Compra Realizada" });
+      setLoadingProducts(false);
+      return true;
+    } catch (error) {
+      console.error(error);
       setLoadingProducts(false);
       return false;
     }
