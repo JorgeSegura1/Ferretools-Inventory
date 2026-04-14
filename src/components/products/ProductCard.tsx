@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, MinusCircle, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface ProductCardProps {
   product: Product;
@@ -20,6 +21,7 @@ export default function ProductCard({
   onRemoveFromSale,
   isProductInSale 
 }: ProductCardProps) {
+  const { user } = useAuth();
   const isOutOfStock = product.quantity === 0;
   const productIsSelectedForSale = isProductInSale ? isProductInSale(product.id) : false;
 
@@ -46,6 +48,7 @@ export default function ProductCard({
             alt={product.name}
             fill
             className="object-cover transition-transform duration-700 group-hover:scale-110"
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             data-ai-hint="industrial product"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-60" />
@@ -69,7 +72,7 @@ export default function ProductCard({
         <CardTitle className="text-lg font-bold mb-2 line-clamp-1 group-hover:text-primary transition-colors">
           {product.name}
         </CardTitle>
-        <CardDescription className="text-xs text-muted-foreground/80 mb-4 line-clamp-2 leading-relaxed">
+        <CardDescription className="text-xs text-muted-foreground/80 mb-4 line-clamp-3 leading-relaxed min-h-[3rem] sm:min-h-[3.75rem]">
           {product.description}
         </CardDescription>
         <div className="flex items-baseline gap-1">
@@ -85,7 +88,7 @@ export default function ProductCard({
             {isOutOfStock ? '0 Unidades' : `${product.quantity} Disponibles`}
           </Badge>
         </div>
-        {role === 'admin' && !isOutOfStock && onSelectForSale && (
+        {user && !isOutOfStock && onSelectForSale && (
           <Button 
             variant={productIsSelectedForSale ? "secondary" : "default"} 
             size="sm" 
@@ -95,8 +98,18 @@ export default function ProductCard({
             {productIsSelectedForSale ? (
               <><MinusCircle className="mr-2 h-4 w-4" /> Quitar</>
             ) : (
-              <><PlusCircle className="mr-2 h-4 w-4" /> Gestionar Venta</>
+              <><PlusCircle className="mr-2 h-4 w-4" /> {role === 'admin' ? 'Gestionar Venta' : 'Comprar Ahora'}</>
             )}
+          </Button>
+        )}
+        {!user && !isOutOfStock && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full font-bold uppercase tracking-tighter h-10 rounded-xl opacity-50"
+            disabled
+          >
+            Accede para Comprar
           </Button>
         )}
       </CardFooter>

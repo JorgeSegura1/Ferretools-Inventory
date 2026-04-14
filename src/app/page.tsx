@@ -1,4 +1,3 @@
-
 "use client";
 
 import ProductList from '@/components/products/ProductList';
@@ -284,10 +283,10 @@ export default function HomePage() {
               </Button>
             )}
           </div>
-          {role === 'admin' && saleItems.length > 0 && (
+          {user && saleItems.length > 0 && (
             <Button onClick={() => setIsSaleSheetOpen(true)} className="relative premium-gradient border-none rounded-2xl h-14 px-8 font-black uppercase tracking-tighter shadow-xl shadow-primary/30 transition-all hover:scale-105 active:scale-95">
               <ShoppingCart className="mr-3 h-5 w-5" />
-              Revisar Despacho
+              {role === 'admin' ? 'Revisar Despacho' : 'Revisar Carrito'}
               <span className="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full bg-accent text-white text-[11px] font-black border-[3px] border-background shadow-lg">
                 {saleItems.length}
               </span>
@@ -319,7 +318,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {role === 'admin' && (
+      {user && (
         <SaleReviewSheet
           isOpen={isSaleSheetOpen}
           setIsOpen={setIsSaleSheetOpen}

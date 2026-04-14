@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { SaleItem } from '@/types';
@@ -20,6 +19,7 @@ import { Minus, Plus, Trash2, Loader2, CreditCard, Wallet, CheckCircle2 } from '
 import { useState } from 'react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 interface SaleReviewSheetProps {
   isOpen: boolean;
@@ -51,6 +51,7 @@ export default function SaleReviewSheet({
   isProcessingSale,
 }: SaleReviewSheetProps) {
   const { toast } = useToast();
+  const { role } = useAuth();
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'nequi'>('cash');
   const [nequiPhone, setNequiPhone] = useState('');
   const [isSimulatingNequi, setIsSimulatingNequi] = useState(false);
@@ -95,20 +96,26 @@ export default function SaleReviewSheet({
     setNequiPhone('');
   };
 
+  const sheetTitle = role === 'admin' ? "Revisión de Despacho" : "Confirmar Pedido";
+  const sheetDescription = role === 'admin' 
+    ? "Ajusta las cantidades finales y selecciona el método de recaudo."
+    : "Revisa tus suministros y finaliza tu compra segura.";
+  const confirmButtonText = role === 'admin' ? "Finalizar Despacho" : "Finalizar Compra";
+
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col glass-card border-l border-white/10">
         <SheetHeader>
-          <SheetTitle className="text-xl sm:text-2xl font-black uppercase tracking-tighter">Revisión de Despacho</SheetTitle>
+          <SheetTitle className="text-xl sm:text-2xl font-black uppercase tracking-tighter">{sheetTitle}</SheetTitle>
           <SheetDescription className="text-xs">
-            Ajusta las cantidades finales y selecciona el método de recaudo.
+            {sheetDescription}
           </SheetDescription>
         </SheetHeader>
 
         {items.length === 0 ? (
           <div className="flex-grow flex flex-col items-center justify-center text-center p-4">
             <Trash2 className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mb-4 opacity-20" />
-            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Lista de despacho vacía</p>
+            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Lista vacía</p>
             <SheetClose asChild>
               <Button variant="outline" className="mt-4 rounded-xl font-bold uppercase text-[10px] tracking-widest">Volver al Catálogo</Button>
             </SheetClose>
@@ -174,7 +181,7 @@ export default function SaleReviewSheet({
                 {/* Sección de Pago */}
                 <div className="pt-6 space-y-4">
                   <div className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                    <div className="h-1 w-1 rounded-full bg-primary" /> Método de Recaudo
+                    <div className="h-1 w-1 rounded-full bg-primary" /> Método de Pago
                   </div>
                   
                   <RadioGroup 
@@ -192,7 +199,7 @@ export default function SaleReviewSheet({
                         className="flex flex-col items-center justify-between rounded-xl border-2 border-white/5 bg-white/[0.02] p-4 hover:bg-white/5 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
                       >
                         <CreditCard className="mb-2 h-5 w-5 text-muted-foreground" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Efectivo</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">{role === 'admin' ? 'Efectivo' : 'Contra Entrega'}</span>
                       </Label>
                     </div>
                     <div>
@@ -231,7 +238,7 @@ export default function SaleReviewSheet({
                             {isSimulatingNequi ? (
                               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Esperando Aprobación...</>
                             ) : (
-                              "Enviar Notificación Nequi"
+                              "Pagar con Nequi"
                             )}
                           </Button>
                         </>
@@ -254,7 +261,7 @@ export default function SaleReviewSheet({
                   <span className="text-white">{totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</span>
                 </div>
                 <div className="flex justify-between items-center py-4 border-y border-white/5">
-                  <span className="text-sm font-black uppercase tracking-[0.2em] text-primary">Total a Recaudar</span>
+                  <span className="text-sm font-black uppercase tracking-[0.2em] text-primary">Total a Pagar</span>
                   <span className="text-2xl font-black text-white">{totalAmount.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0})}</span>
                 </div>
                 <div className="flex flex-col gap-3">
@@ -263,7 +270,7 @@ export default function SaleReviewSheet({
                         className="w-full h-14 rounded-2xl premium-gradient border-none font-black uppercase tracking-tighter shadow-xl shadow-primary/30"
                         disabled={isProcessingSale || items.length === 0 || (paymentMethod === 'nequi' && !isNequiConfirmed)}
                     >
-                        {isProcessingSale ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Finalizar Despacho"}
+                        {isProcessingSale ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : confirmButtonText}
                     </Button>
                     <SheetClose asChild>
                         <Button variant="ghost" className="w-full text-[10px] font-black uppercase tracking-widest opacity-50 hover:opacity-100" disabled={isProcessingSale}>Cancelar Operación</Button>
