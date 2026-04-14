@@ -7,7 +7,7 @@ import type { SaleRecord } from '@/types';
 import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, ShoppingBag, Calendar, Package, MapPin, AlertCircle } from 'lucide-react';
+import { Loader2, ShoppingBag, Calendar, Package, MapPin, AlertCircle, ExternalLink } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import NextImage from 'next/image';
@@ -45,7 +45,7 @@ export default function PurchasesPage() {
   const router = useRouter();
   const [purchases, setPurchases] = useState<SaleRecord[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; code?: string } | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -54,7 +54,7 @@ export default function PurchasesPage() {
       return;
     }
 
-    // CRITICAL: Esta consulta requiere un índice compuesto en Firestore
+    // Esta consulta requiere un índice compuesto: userId (Asc) + saleDate (Desc)
     const purchasesQuery = query(
       collection(db, 'sales'),
       where('userId', '==', user.uid),
@@ -86,12 +86,17 @@ export default function PurchasesPage() {
       setError(null);
     }, (err) => {
       console.error("Firestore error in purchases:", err);
-      if (err.code === 'failed-precondition') {
-        setError("Falta configurar un índice en la base de datos. Por favor, contacta al administrador o revisa la consola para el enlace de creación.");
-      } else {
-        setError("No pudimos cargar tus compras en este momento.");
-      }
       setLoadingPurchases(false);
+      if (err.code === 'failed-precondition') {
+        setError({
+          code: 'failed-precondition',
+          message: "Falta configurar un índice en Firestore para poder ordenar tus compras por fecha."
+        });
+      } else {
+        setError({
+          message: "No pudimos cargar tus compras en este momento. Por favor, intenta de nuevo más tarde."
+        });
+      }
     });
 
     return () => unsubscribe();
@@ -128,10 +133,30 @@ export default function PurchasesPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center">
-        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-        <h2 className="text-xl font-bold mb-2">Ops! Algo salió mal</h2>
-        <p className="text-muted-foreground text-sm max-w-md mb-6">{error}</p>
-        <Button onClick={() => window.location.reload()} variant="outline">Reintentar</Button>
+        <div className="bg-destructive/10 p-8 rounded-[2.5rem] border border-destructive/20 max-w-md">
+          <AlertCircle className="h-16 w-16 text-destructive mb-4 mx-auto" />
+          <h2 className="text-xl font-black uppercase tracking-tighter mb-2">Error de Configuración</h2>
+          <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
+            {error.message}
+            {error.code === 'failed-precondition' && (
+              <span className="block mt-4 font-bold text-white">
+                Para solucionarlo, debes hacer clic en el enlace que aparece en la consola de tu navegador (F12) y presionar "Crear índice" en Firebase.
+              </span>
+            )}
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl font-bold uppercase text-[10px] tracking-widest">
+              Reintentar Sincronización
+            </Button>
+            {error.code === 'failed-precondition' && (
+              <Button asChild variant="ghost" className="text-[9px] font-black uppercase tracking-widest opacity-60">
+                <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer">
+                  Ir a Firebase Console <ExternalLink className="ml-2 h-3 w-3" />
+                </a>
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
