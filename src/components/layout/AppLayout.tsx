@@ -1,10 +1,9 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, ListChecks, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, Bell, History, DollarSign } from 'lucide-react';
+import { LayoutGrid, PlusCircle, Warehouse, Wrench, LogIn, UserPlus, LogOut, Bell, History, DollarSign, ListChecks } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -14,26 +13,24 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  SidebarTrigger,
-  SidebarFooter,
   useSidebar,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const baseNavItems = [
-  { href: '/', label: 'Catálogo', icon: LayoutGrid, requiresAuth: false },
-  { href: '/inventory', label: 'Inventario', icon: Warehouse, requiresAuth: true, requiredRole: 'admin' },
-  { href: '/inventory/add', label: 'Agregar Artículo', icon: PlusCircle, requiresAuth: true, requiredRole: 'admin' },
-  { href: '/inventory/history', label: 'Historial de Productos', icon: History, requiresAuth: true, requiredRole: 'admin' },
-  { href: '/sales', label: 'Ventas', icon: DollarSign, requiresAuth: true, requiredRole: 'admin' },
+  { href: '/', label: 'Explorar Catálogo', icon: LayoutGrid, requiresAuth: false },
+  { href: '/inventory', label: 'Centro de Inventario', icon: Warehouse, requiresAuth: true, requiredRole: 'admin' },
+  { href: '/inventory/add', label: 'Nuevo Suministro', icon: PlusCircle, requiresAuth: true, requiredRole: 'admin' },
+  { href: '/inventory/history', label: 'Registro de Entradas', icon: History, requiresAuth: true, requiredRole: 'admin' },
+  { href: '/sales', label: 'Monitor de Ventas', icon: DollarSign, requiresAuth: true, requiredRole: 'admin' },
 ];
 
 const authNavItems = [
-  { href: '/login', label: 'Iniciar Sesión', icon: LogIn, requiresAuth: false, showIfLoggedOut: true },
-  { href: '/signup', label: 'Registrarse', icon: UserPlus, requiresAuth: false, showIfLoggedOut: true },
+  { href: '/login', label: 'Acceso Partner', icon: LogIn, requiresAuth: false, showIfLoggedOut: true },
+  { href: '/signup', label: 'Unirse a la Red', icon: UserPlus, requiresAuth: false, showIfLoggedOut: true },
 ];
 
 function SiteHeader() {
@@ -41,38 +38,31 @@ function SiteHeader() {
   const { user } = useAuth();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
-      <div className="container flex h-14 items-center">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-lg md:hidden">
+      <div className="container flex h-16 items-center px-4">
         <Button
           variant="ghost"
           size="icon"
-          className="mr-2"
+          className="mr-2 text-primary"
           onClick={toggleSidebar}
-          aria-label="Toggle Sidebar"
         >
           <ListChecks className="h-6 w-6" />
         </Button>
         <Link href="/" className="flex items-center space-x-2">
-          <Wrench className="h-6 w-6 text-primary" />
-          <span className="font-bold font-headline">Ferretools</span>
+          <div className="bg-primary/20 p-1.5 rounded-lg">
+            <Wrench className="h-5 w-5 text-primary" />
+          </div>
+          <span className="font-bold text-xl tracking-tight uppercase">Ferretools</span>
         </Link>
-        <div className="ml-auto flex items-center space-x-2">
+        <div className="ml-auto flex items-center">
           {user ? (
-            <>
-              <Button variant="ghost" size="icon" aria-label="Notifications" className="h-8 w-8">
-                <Bell className="h-5 w-5" />
-              </Button>
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
-                <AvatarFallback>{user.email?.[0].toUpperCase() || 'U'}</AvatarFallback>
-              </Avatar>
-            </>
+            <Avatar className="h-9 w-9 border border-primary/20">
+              <AvatarImage src={user.photoURL || undefined} />
+              <AvatarFallback className="bg-muted text-primary">{user.email?.[0].toUpperCase()}</AvatarFallback>
+            </Avatar>
           ) : (
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">
-                <LogIn className="mr-2 h-4 w-4" />
-                Ingresar
-              </Link>
+            <Button variant="ghost" size="sm" asChild className="text-primary font-semibold">
+              <Link href="/login">Acceder</Link>
             </Button>
           )}
         </div>
@@ -80,7 +70,6 @@ function SiteHeader() {
     </header>
   );
 }
-
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -93,109 +82,85 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   };
 
   const visibleNavItems = baseNavItems.filter(item => {
-    if (!item.requiresAuth) return true; 
-
-    if (loading) return false; 
-    if (!user) return false;   
-
-    if (item.requiredRole === 'admin') {
-      if (!role) return false; 
-      return role === 'admin';
-    }
-    return true; 
+    if (!item.requiresAuth) return true;
+    if (loading) return false;
+    if (!user) return false;
+    if (item.requiredRole === 'admin') return role === 'admin';
+    return true;
   });
 
   const currentAuthNavItems = authNavItems.filter(item => {
-    if (loading) return false; 
+    if (loading) return false;
     if (item.showIfLoggedOut && user) return false;
     return true;
   });
-  
+
   const allNavItems = [...visibleNavItems, ...currentAuthNavItems];
 
-
   return (
-    <SidebarProvider defaultOpen className="flex-col md:flex-row">
-      <SiteHeader /> {/* This will be the first item in the flex column on mobile */}
-      
-      {/* This div wrapper ensures Sidebar and SidebarInset are laid out as a row */}
-      <div className="flex flex-1 w-full"> 
-        <Sidebar collapsible="icon" className="border-r">
-          <SidebarHeader className="p-4">
-            <Link href="/" className="flex items-center gap-2">
-              <Wrench className="h-8 w-8 text-primary" />
-              <h1 className="text-xl font-bold font-headline group-data-[collapsible=icon]:hidden">
+    <SidebarProvider defaultOpen className="flex-col md:flex-row bg-background">
+      <SiteHeader />
+      <div className="flex flex-1 w-full relative">
+        <Sidebar collapsible="icon" className="border-r border-white/5 bg-background/50 backdrop-blur-xl">
+          <SidebarHeader className="p-6">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
+                <Wrench className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="text-xl font-bold tracking-tighter group-data-[collapsible=icon]:hidden uppercase">
                 Ferretools
               </h1>
             </Link>
           </SidebarHeader>
-          <SidebarContent>
+          <SidebarContent className="px-3">
             <SidebarMenu>
               {allNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <Link href={item.href}>
                     <SidebarMenuButton
                       isActive={pathname === item.href}
-                      tooltip={{ children: item.label, className: "font-body"}}
-                      className="font-body"
+                      className="py-6 px-4 rounded-xl transition-all duration-300 hover:bg-white/5"
+                      tooltip={item.label}
                     >
-                      <item.icon className="h-5 w-5" />
-                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                      <item.icon className={pathname === item.href ? "text-primary h-5 w-5" : "text-muted-foreground h-5 w-5"} />
+                      <span className="font-medium text-sm ml-2">{item.label}</span>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarContent>
-          <SidebarFooter className="p-2 mt-auto border-t">
-            {user && !loading && (
-              <div className="flex flex-col gap-2 items-start group-data-[collapsible=icon]:items-center">
-                 <div className="flex items-center gap-2 p-2 w-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.photoURL || undefined} alt={user.displayName || user.email || 'User'} />
-                    <AvatarFallback>{user.email?.[0].toUpperCase() || 'U'}</AvatarFallback>
+          <SidebarFooter className="p-4 mt-auto border-t border-white/5">
+            {user && (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 p-2 bg-white/5 rounded-xl group-data-[collapsible=icon]:justify-center">
+                  <Avatar className="h-8 w-8 border border-primary/20">
+                    <AvatarImage src={user.photoURL || undefined} />
+                    <AvatarFallback className="bg-muted text-xs">{user.email?.[0].toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                    <span className="text-sm font-medium truncate max-w-[120px]">{user.displayName || user.email}</span>
+                    <span className="text-xs font-semibold truncate max-w-[120px]">{user.displayName || user.email}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{role || 'Invitado'}</span>
                   </div>
                 </div>
-                <SidebarMenuButton
-                  tooltip={{ children: "Notificaciones", className: "font-body"}}
-                  className="font-body w-full group-data-[collapsible=expanded]:hidden" 
-                  aria-label="Notifications"
-                >
-                  <Bell className="h-5 w-5" />
-                  <span className="group-data-[collapsible=icon]:hidden">Notificaciones</span>
-                </SidebarMenuButton>
-                <SidebarMenuButton
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
                   onClick={handleSignOut}
-                  tooltip={{ children: "Cerrar Sesión", className: "font-body"}}
-                  className="font-body w-full"
+                  className="w-full justify-start text-muted-foreground hover:text-destructive group-data-[collapsible=icon]:justify-center"
                 >
-                  <LogOut className="h-5 w-5" />
+                  <LogOut className="h-4 w-4 mr-2" />
                   <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
-                </SidebarMenuButton>
+                </Button>
               </div>
-            )}
-            {(!user && !loading) && (
-               <SidebarMenuItem>
-                  <Link href="/login">
-                    <SidebarMenuButton
-                      isActive={pathname === "/login"}
-                      tooltip={{ children: "Iniciar Sesión", className: "font-body"}}
-                      className="font-body w-full"
-                    >
-                      <LogIn className="h-5 w-5" />
-                      <span className="group-data-[collapsible=icon]:hidden">Iniciar Sesión</span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
             )}
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="ml-0 md:ml-64"> 
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
-            {children}
+        <SidebarInset className="ml-0 md:ml-64 bg-background">
+          <main className="flex-1">
+            <div className="max-w-7xl mx-auto p-4 md:p-8 lg:p-12">
+              {children}
+            </div>
           </main>
         </SidebarInset>
       </div>

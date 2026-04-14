@@ -1,11 +1,9 @@
-
 import type { Product } from '@/types';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { PlusCircle, MinusCircle } from 'lucide-react';
+import { PlusCircle, MinusCircle, ShieldCheck } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -13,16 +11,6 @@ interface ProductCardProps {
   onSelectForSale?: (product: Product) => void;
   onRemoveFromSale?: (productId: string) => void;
   isProductInSale?: (productId: string) => boolean;
-}
-
-function getProductHint(category?: string): string {
-  if (category) {
-    const words = category.split(' ').filter(Boolean);
-    if (words.length === 0) return 'hardware tool';
-    if (words.length === 1) return words[0];
-    return words.slice(0, 2).join(' ');
-  }
-  return 'hardware tool';
 }
 
 export default function ProductCard({ 
@@ -50,53 +38,66 @@ export default function ProductCard({
   };
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-300">
+    <Card className="glass-card flex flex-col h-full overflow-hidden transition-all duration-500 hover:scale-[1.02] hover:border-primary/50 group">
       <CardHeader className="p-0 relative">
-        <div className="aspect-video relative w-full">
+        <div className="aspect-[4/3] relative w-full overflow-hidden">
           <Image
             src={product.imageUrl}
             alt={product.name}
             fill
-            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover"
-            data-ai-hint={getProductHint(product.category)}
+            className="object-cover transition-transform duration-700 group-hover:scale-110"
+            data-ai-hint="industrial product"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-60" />
           {isOutOfStock && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <Badge variant="destructive" className="text-md sm:text-lg px-3 sm:px-4 py-1 sm:py-2 transform rotate-[-15deg] font-bold">
-                AGOTADO
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px] flex items-center justify-center">
+              <Badge variant="destructive" className="uppercase tracking-tighter font-bold text-xs py-1">
+                Agotado
               </Badge>
             </div>
           )}
+          <Badge variant="secondary" className="absolute top-3 right-3 bg-background/50 backdrop-blur-md text-[10px] border-none uppercase tracking-widest">
+            {product.category || 'General'}
+          </Badge>
         </div>
       </CardHeader>
-      <CardContent className="p-3 sm:p-4 flex-grow">
-        <CardTitle className="text-base sm:text-lg font-headline mb-1 line-clamp-2 min-h-[3rem] sm:min-h-[3.5rem]">
+      <CardContent className="p-5 flex-grow">
+        <div className="flex items-center gap-1 mb-2 text-primary">
+           <ShieldCheck className="h-3 w-3" />
+           <span className="text-[10px] font-bold uppercase tracking-wider">Garantía Premium</span>
+        </div>
+        <CardTitle className="text-lg font-bold mb-2 line-clamp-1 group-hover:text-primary transition-colors">
           {product.name}
         </CardTitle>
-        <CardDescription className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-3 min-h-[3rem] sm:min-h-[3.75rem]">
+        <CardDescription className="text-xs text-muted-foreground/80 mb-4 line-clamp-2 leading-relaxed">
           {product.description}
         </CardDescription>
-        <p className="text-md sm:text-lg font-semibold text-primary mb-1">
-          {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-        </p>
+        <div className="flex items-baseline gap-1">
+           <span className="text-2xl font-black text-white">
+            {product.price.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}
+          </span>
+          <span className="text-[10px] text-muted-foreground font-semibold">COP</span>
+        </div>
       </CardContent>
-      <CardFooter className="p-3 sm:p-4 pt-0 flex flex-col sm:flex-row sm:justify-between items-stretch sm:items-center gap-2">
-        <Badge variant={isOutOfStock ? 'secondary' : 'default'} className={cn("text-xs text-center sm:text-left", isOutOfStock ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
-          {isOutOfStock ? 'No disponible' : `Disponible: ${product.quantity}`}
-        </Badge>
-        {role === 'admin' && !isOutOfStock && onSelectForSale && onRemoveFromSale && isProductInSale && (
-          <div className="w-full sm:w-auto">
+      <CardFooter className="p-5 pt-0 flex flex-col gap-3">
+        <div className="flex items-center justify-between w-full">
+           <Badge variant="outline" className="text-[10px] border-white/10 text-muted-foreground">
+            {isOutOfStock ? '0 Unidades' : `${product.quantity} Disponibles`}
+          </Badge>
+        </div>
+        {role === 'admin' && !isOutOfStock && onSelectForSale && (
+          <Button 
+            variant={productIsSelectedForSale ? "secondary" : "default"} 
+            size="sm" 
+            onClick={productIsSelectedForSale ? handleRemoveClick : handleSelectClick}
+            className="w-full font-bold uppercase tracking-tighter h-10 rounded-xl"
+          >
             {productIsSelectedForSale ? (
-              <Button variant="outline" size="sm" onClick={handleRemoveClick} className="text-xs w-full">
-                <MinusCircle className="mr-1 h-3.5 w-3.5" /> Quitar
-              </Button>
+              <><MinusCircle className="mr-2 h-4 w-4" /> Quitar</>
             ) : (
-              <Button variant="default" size="sm" onClick={handleSelectClick} className="text-xs w-full">
-                <PlusCircle className="mr-1 h-3.5 w-3.5" /> Vender
-              </Button>
+              <><PlusCircle className="mr-2 h-4 w-4" /> Gestionar Venta</>
             )}
-          </div>
+          </Button>
         )}
       </CardFooter>
     </Card>

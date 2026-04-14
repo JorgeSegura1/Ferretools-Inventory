@@ -1,4 +1,3 @@
-
 "use client";
 
 import ProductList from '@/components/products/ProductList';
@@ -7,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Filter, ListTree, Tag, XIcon, ShoppingCart, Loader2 } from 'lucide-react';
+import { Filter, ListTree, XIcon, ShoppingCart, Loader2, Sparkles, Search } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,131 +54,70 @@ export default function HomePage() {
         const min = Math.min(...prices);
         const max = Math.max(...prices);
         setMinMaxPrice([min, max]);
-        // Only set currentPriceRange if it hasn't been touched by user yet
-        // This effect runs multiple times, so we check if it's still at default.
         if (currentPriceRange[0] === 0 && currentPriceRange[1] === 1000) {
             setCurrentPriceRange([min, max]);
         }
-      } else {
-        setMinMaxPrice([0,1000]);
-        if (currentPriceRange[0] === 0 && currentPriceRange[1] === 1000) {
-            setCurrentPriceRange([0,1000]);
-        }
       }
     }
-  }, [products]); // Removed currentPriceRange from deps
+  }, [products]);
 
   const allCategories = useMemo(() => {
-    if (loadingProducts) return [];
     const categories = products
       .map(product => product.category)
       .filter((category): category is string => !!category); 
     return [...new Set(categories)].sort();
-  }, [products, loadingProducts]);
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
     let tempProducts = products;
-
     if (searchTerm) {
       tempProducts = tempProducts.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
+        product.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
     if (selectedCategory) {
       tempProducts = tempProducts.filter(product => product.category === selectedCategory);
     }
-    
-    if (showInStockOnly) {
-      tempProducts = tempProducts.filter(product => product.quantity > 0);
-    } else if (showOutOfStockOnly) {
-      tempProducts = tempProducts.filter(product => product.quantity === 0);
-    }
-
+    if (showInStockOnly) tempProducts = tempProducts.filter(product => product.quantity > 0);
+    if (showOutOfStockOnly) tempProducts = tempProducts.filter(product => product.quantity === 0);
     tempProducts = tempProducts.filter(product => 
       product.price >= currentPriceRange[0] && product.price <= currentPriceRange[1]
     );
-
     return tempProducts;
   }, [products, searchTerm, selectedCategory, showInStockOnly, showOutOfStockOnly, currentPriceRange]);
-
-  const handleCategorySelect = (category: string | null) => {
-    setSelectedCategory(category);
-  };
-
-  const handleClearAdvancedFilters = () => {
-    setShowInStockOnly(false);
-    setShowOutOfStockOnly(false);
-    setCurrentPriceRange(minMaxPrice); 
-  };
-  
-  const activeAdvancedFiltersCount = [
-    showInStockOnly,
-    showOutOfStockOnly,
-    currentPriceRange[0] !== minMaxPrice[0] || currentPriceRange[1] !== minMaxPrice[1]
-  ].filter(Boolean).length;
 
   const resetAllFilters = () => {
     setSearchTerm('');
     setSelectedCategory(null);
-    handleClearAdvancedFilters();
+    setShowInStockOnly(false);
+    setShowOutOfStockOnly(false);
+    setCurrentPriceRange(minMaxPrice);
   };
 
-  // Sale Item Management
   const handleSelectForSale = (product: Product) => {
-    setSaleItems(prevItems => {
-      const existingItem = prevItems.find(item => item.productId === product.id);
-      if (existingItem) {
-        return prevItems; 
-      }
-      if (product.quantity > 0) {
-        return [...prevItems, {
-          productId: product.id,
-          name: product.name,
-          imageUrl: product.imageUrl,
-          price: product.price,
-          category: product.category,
-          quantityToSell: 1,
-          maxQuantity: product.quantity,
-        }];
-      }
-      return prevItems;
+    setSaleItems(prev => {
+      if (prev.find(item => item.productId === product.id)) return prev;
+      return [...prev, {
+        productId: product.id,
+        name: product.name,
+        imageUrl: product.imageUrl,
+        price: product.price,
+        category: product.category,
+        quantityToSell: 1,
+        maxQuantity: product.quantity,
+      }];
     });
   };
 
-  const handleRemoveFromSale = (productId: string) => {
-    setSaleItems(prevItems => prevItems.filter(item => item.productId !== productId));
-  };
-  
-  const isProductInSale = (productId: string): boolean => {
-    return saleItems.some(item => item.productId === productId);
-  }
-
-  const handleUpdateSaleQuantity = (productId: string, newQuantity: number) => {
-    setSaleItems(prevItems =>
-      prevItems.map(item =>
-        item.productId === productId
-          ? { ...item, quantityToSell: Math.max(1, Math.min(newQuantity, item.maxQuantity)) }
-          : item
-      )
-    );
-  };
-
   const handleConfirmSale = async () => {
-    if (saleItems.length === 0) return;
     setIsProcessingSale(true);
-    const itemsToProcess = saleItems.map(item => ({
-      productId: item.productId,
+    const success = await processSaleAndUpdateStock(saleItems.map(item => ({
+      ...item,
       quantitySold: item.quantityToSell,
       priceAtSale: item.price,
-      productName: item.name, 
-      category: item.category, 
-      imageUrl: item.imageUrl
-    }));
-    
-    const success = await processSaleAndUpdateStock(itemsToProcess);
+      productName: item.name,
+    })));
     if (success) {
       setSaleItems([]);
       setIsSaleSheetOpen(false); 
@@ -187,33 +125,119 @@ export default function HomePage() {
     setIsProcessingSale(false);
   };
 
-
   return (
-    <div className="container mx-auto py-8 px-4">
-      <header className="mb-8 text-center">
-        <h1 className="text-3xl sm:text-4xl font-bold font-headline text-primary">Catálogo de Productos</h1>
-        <p className="text-md sm:text-lg text-muted-foreground mt-2">Encuentra todo lo que necesitas para tus proyectos.</p>
-      </header>
-      
-      <div className="mb-6 flex flex-col md:flex-row md:items-center gap-4">
-        <Input
-          type="text"
-          placeholder="Buscar productos por nombre, descripción..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full"
-        />
-        <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2 md:justify-end">
-          {(searchTerm || selectedCategory || activeAdvancedFiltersCount > 0) && (
-            <Button onClick={resetAllFilters} variant="ghost" className="text-sm w-full sm:w-auto justify-start sm:justify-center">
-              <XIcon className="mr-2 h-4 w-4" /> Limpiar filtros
-            </Button>
-          )}
+    <div className="space-y-12">
+      {/* Hero Section */}
+      <section className="relative py-12 px-6 rounded-3xl overflow-hidden border border-white/5 bg-gradient-to-br from-primary/10 via-background to-background">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary/20 blur-[100px] rounded-full" />
+        <div className="relative z-10 flex flex-col items-start gap-6 max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest">
+            <Sparkles className="h-3 w-3" /> Innovación Industrial
+          </div>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none">
+            La Siguiente Generación de <span className="text-primary">Ferretería Profesional</span>
+          </h1>
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            Suministros de alto nivel para marcas serias. Gestión inteligente de inventario y despacho eficiente en toda Colombia.
+          </p>
+        </div>
+      </section>
+
+      {/* Control Panel */}
+      <div className="sticky top-4 z-30 flex flex-col gap-6 p-6 glass-card rounded-2xl shadow-2xl">
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Buscar por referencia o nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-12 bg-white/5 border-white/10 rounded-xl focus:ring-primary"
+            />
+          </div>
+          <div className="flex gap-2 w-full md:w-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-12 border-white/10 px-6 rounded-xl font-bold uppercase text-[10px] tracking-widest">
+                  <ListTree className="mr-2 h-4 w-4" />
+                  {selectedCategory || "Categorías"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="glass-card border-white/10 w-56">
+                <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Filtrar por sector</DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-white/5" />
+                <DropdownMenuItem onClick={() => setSelectedCategory(null)} className="rounded-lg">Todas</DropdownMenuItem>
+                {allCategories.map(cat => (
+                  <DropdownMenuItem key={cat} onClick={() => setSelectedCategory(cat)} className="rounded-lg">{cat}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="h-12 border-white/10 px-6 rounded-xl font-bold uppercase text-[10px] tracking-widest">
+                  <Filter className="mr-2 h-4 w-4" /> Filtros
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="glass-card border-none">
+                <SheetHeader>
+                  <SheetTitle className="text-2xl font-black uppercase tracking-tighter">Refinar Selección</SheetTitle>
+                  <SheetDescription>Ajusta los parámetros para encontrar el equipo ideal.</SheetDescription>
+                </SheetHeader>
+                <div className="grid gap-8 py-8">
+                  <div className="space-y-4">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-primary">Disponibilidad</Label>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <Checkbox id="inStock" checked={showInStockOnly} onCheckedChange={v => setShowInStockOnly(!!v)} />
+                        <Label htmlFor="inStock" className="text-sm font-medium">Solo en Stock</Label>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Checkbox id="outOfStock" checked={showOutOfStockOnly} onCheckedChange={v => setShowOutOfStockOnly(!!v)} />
+                        <Label htmlFor="outOfStock" className="text-sm font-medium">Solo Agotados</Label>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-primary">Rango de Precio (COP)</Label>
+                    <Slider
+                      min={minMaxPrice[0]}
+                      max={minMaxPrice[1]}
+                      step={1000}
+                      value={currentPriceRange}
+                      onValueChange={v => setCurrentPriceRange(v as [number, number])}
+                    />
+                    <div className="flex justify-between text-[10px] font-bold text-muted-foreground">
+                      <span>${currentPriceRange[0].toLocaleString()}</span>
+                      <span>${currentPriceRange[1].toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+                <SheetFooter>
+                   <Button onClick={resetAllFilters} variant="ghost" className="w-full text-xs font-bold uppercase">Limpiar Todo</Button>
+                   <SheetClose asChild>
+                     <Button className="w-full h-12 rounded-xl font-black uppercase tracking-tighter">Aplicar Cambios</Button>
+                   </SheetClose>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+            {(searchTerm || selectedCategory) && (
+              <Button onClick={resetAllFilters} variant="link" className="text-xs h-auto p-0 text-primary font-bold uppercase tracking-widest">
+                <XIcon className="mr-1 h-3 w-3" /> Borrar Búsqueda
+              </Button>
+            )}
+          </div>
           {role === 'admin' && saleItems.length > 0 && (
-            <Button variant="outline" onClick={() => setIsSaleSheetOpen(true)} size="sm" className="relative w-full sm:w-auto">
+            <Button onClick={() => setIsSaleSheetOpen(true)} className="relative premium-gradient border-none rounded-xl h-12 px-6 font-black uppercase tracking-tighter shadow-lg shadow-primary/20 transition-transform active:scale-95">
               <ShoppingCart className="mr-2 h-4 w-4" />
-              Revisar Venta
-              <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
+              Ver Carrito
+              <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-white text-[10px] font-black border-2 border-background">
                 {saleItems.length}
               </span>
             </Button>
@@ -221,121 +245,26 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="mb-8 flex flex-row flex-wrap items-center justify-start gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="text-sm">
-              <ListTree className="mr-2 h-3.5 w-3.5" />
-              {selectedCategory || "Categoría"}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel>Seleccionar Categoría</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => handleCategorySelect(null)}>
-              Todas las categorías
-            </DropdownMenuItem>
-            {allCategories.map(category => (
-              <DropdownMenuItem key={category} onSelect={() => handleCategorySelect(category)}>
-                {category}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Button variant="outline" size="sm" className="text-sm" disabled>
-          <Tag className="mr-2 h-3.5 w-3.5" />
-          Marca
-        </Button>
-
-        <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="text-sm relative">
-              <Filter className="mr-2 h-3.5 w-3.5" />
-              Más Filtros
-              {activeAdvancedFiltersCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs">
-                  {activeAdvancedFiltersCount}
-                </span>
-              )}
-            </Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Filtros Avanzados</SheetTitle>
-              <SheetDescription>
-                Aplica filtros adicionales para refinar tu búsqueda.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="grid gap-6 py-6">
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Disponibilidad</Label>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="inStock" 
-                    checked={showInStockOnly} 
-                    onCheckedChange={(checked) => {
-                      setShowInStockOnly(!!checked);
-                      if (checked) setShowOutOfStockOnly(false);
-                    }}
-                  />
-                  <Label htmlFor="inStock" className="font-normal">Mostrar solo en stock</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="outOfStock" 
-                    checked={showOutOfStockOnly} 
-                    onCheckedChange={(checked) => {
-                      setShowOutOfStockOnly(!!checked);
-                      if (checked) setShowInStockOnly(false);
-                    }}
-                  />
-                  <Label htmlFor="outOfStock" className="font-normal">Mostrar solo agotados</Label>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label htmlFor="priceRange" className="text-base font-semibold">
-                  Rango de Precios: ${currentPriceRange[0].toLocaleString()} - ${currentPriceRange[1].toLocaleString()}
-                </Label>
-                <Slider
-                  id="priceRange"
-                  min={minMaxPrice[0]}
-                  max={minMaxPrice[1]}
-                  step={1} 
-                  value={currentPriceRange}
-                  onValueChange={(value) => setCurrentPriceRange(value as [number, number])}
-                  minStepsBetweenThumbs={0}
-                  disabled={products.length === 0 || minMaxPrice[0] === minMaxPrice[1]}
-                />
-                 <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>${minMaxPrice[0].toLocaleString()}</span>
-                    <span>${minMaxPrice[1].toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-            <SheetFooter className="mt-auto">
-              <Button variant="outline" onClick={handleClearAdvancedFilters} className="w-full sm:w-auto">Limpiar Filtros</Button>
-              <SheetClose asChild>
-                <Button type="button" className="w-full sm:w-auto">Aplicar</Button>
-              </SheetClose>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
-      </div>
-      
+      {/* Grid Section */}
       {loadingProducts && products.length === 0 ? (
-        <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <div className="flex justify-center py-20">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       ) : (
-        <ProductList 
-          products={filteredProducts} 
-          role={role}
-          onSelectForSale={handleSelectForSale}
-          onRemoveFromSale={handleRemoveFromSale}
-          isProductInSale={isProductInSale}
-        />
+        <div className="space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
+              Catálogo de Expertos / {filteredProducts.length} Resultados
+            </h2>
+          </div>
+          <ProductList 
+            products={filteredProducts} 
+            role={role}
+            onSelectForSale={handleSelectForSale}
+            onRemoveFromSale={id => setSaleItems(prev => prev.filter(i => i.productId !== id))}
+            isProductInSale={id => saleItems.some(i => i.productId === id)}
+          />
+        </div>
       )}
 
       {role === 'admin' && (
@@ -343,8 +272,8 @@ export default function HomePage() {
           isOpen={isSaleSheetOpen}
           setIsOpen={setIsSaleSheetOpen}
           items={saleItems}
-          onUpdateQuantity={handleUpdateSaleQuantity}
-          onRemoveItem={handleRemoveFromSale}
+          onUpdateQuantity={(id, q) => setSaleItems(prev => prev.map(i => i.productId === id ? {...i, quantityToSell: q} : i))}
+          onRemoveItem={id => setSaleItems(prev => prev.filter(i => i.productId !== id))}
           onConfirmSale={handleConfirmSale}
           isProcessingSale={isProcessingSale}
         />
@@ -352,4 +281,3 @@ export default function HomePage() {
     </div>
   );
 }
-
