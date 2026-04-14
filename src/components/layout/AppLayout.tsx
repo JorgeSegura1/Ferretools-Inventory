@@ -39,7 +39,7 @@ function SiteHeader() {
   const { user } = useAuth();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-lg md:hidden">
+    <header className="sticky top-0 z-40 w-full border-b border-white/5 bg-background/80 backdrop-blur-lg md:hidden">
       <div className="container flex h-16 items-center px-4">
         <Button
           variant="ghost"
@@ -101,7 +101,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider defaultOpen className="flex-col md:flex-row bg-background">
       <SiteHeader />
-      <div className="flex flex-1 w-full relative">
+      <div className="flex flex-1 w-full relative min-h-screen">
         <Sidebar collapsible="icon" className="border-r border-white/5 bg-background/50 backdrop-blur-xl">
           <SidebarHeader className="p-6">
             <Link href="/" className="flex items-center gap-3">
@@ -134,32 +134,32 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <SidebarFooter className="p-4 mt-auto border-t border-white/5">
             {user && (
               <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3 p-2 bg-white/5 rounded-xl group-data-[collapsible=icon]:justify-center">
+                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl group-data-[collapsible=icon]:justify-center border border-white/5">
                   <Avatar className="h-8 w-8 border border-primary/20">
                     <AvatarImage src={user.photoURL || undefined} />
                     <AvatarFallback className="bg-muted text-xs">{user.email?.[0].toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-                    <span className="text-xs font-semibold truncate max-w-[120px]">{user.displayName || user.email}</span>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{role || 'Invitado'}</span>
+                    <span className="text-[11px] font-bold truncate max-w-[120px] text-white">{user.displayName || user.email}</span>
+                    <span className="text-[9px] text-primary font-black uppercase tracking-widest">{role === 'admin' ? 'Administrador' : 'Socio / Usuario'}</span>
                   </div>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={handleSignOut}
-                  className="w-full justify-start text-muted-foreground hover:text-destructive group-data-[collapsible=icon]:justify-center"
+                  className="w-full justify-start text-muted-foreground hover:text-destructive group-data-[collapsible=icon]:justify-center rounded-xl"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
+                  <span className="group-data-[collapsible=icon]:hidden font-bold text-xs uppercase tracking-tighter">Cerrar Sesión</span>
                 </Button>
               </div>
             )}
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="w-full bg-background">
-          <main className="flex-1">
-            <div className="max-w-7xl mx-auto p-4 md:p-8 lg:p-12">
+        <SidebarInset className="flex-1 bg-background min-w-0">
+          <main className="w-full">
+            <div className="max-w-[1600px] mx-auto p-4 md:p-8 lg:p-10">
               {children}
             </div>
           </main>

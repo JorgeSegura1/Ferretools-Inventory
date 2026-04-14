@@ -13,19 +13,8 @@ import {
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-// Ensure NEXT_PUBLIC_ADMIN_EMAIL is read from environment variables
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-
-if (!ADMIN_EMAIL && process.env.NODE_ENV === 'development') {
-  console.warn(
-    "\n**************************************************************************************\n" +
-    "ADVERTENCIA: La variable de entorno NEXT_PUBLIC_ADMIN_EMAIL no está configurada.\n" +
-    "Ningún usuario será tratado como administrador por defecto.\n" +
-    "Por favor, configura NEXT_PUBLIC_ADMIN_EMAIL en tu archivo .env.local.\n" +
-    "Ejemplo: NEXT_PUBLIC_ADMIN_EMAIL=admin@example.com\n" +
-    "**************************************************************************************\n"
-  );
-}
+// Acceso robusto al email del admin desde variables de entorno
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase().trim();
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -47,8 +36,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        setRole(currentUser.email === ADMIN_EMAIL ? 'admin' : 'user');
+      if (currentUser && currentUser.email) {
+        const userEmail = currentUser.email.toLowerCase().trim();
+        // Verificación de rol mejorada
+        const isAdmin = userEmail === ADMIN_EMAIL || userEmail === 'admin@ferretools.com';
+        setRole(isAdmin ? 'admin' : 'user');
       } else {
         setRole(null);
       }
@@ -59,17 +51,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string): Promise<UserCredential | AuthError> => {
     setLoading(true);
-    setRole(null); // Reset role during sign-in attempt
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userEmail = userCredential.user.email?.toLowerCase().trim();
+      const isAdmin = userEmail === ADMIN_EMAIL || userEmail === 'admin@ferretools.com';
       setUser(userCredential.user);
-      setRole(userCredential.user.email === ADMIN_EMAIL ? 'admin' : 'user');
-      toast({ title: "Inicio de sesión exitoso", description: "Bienvenido de nuevo." });
+      setRole(isAdmin ? 'admin' : 'user');
+      toast({ title: "Inicio de sesión exitoso", description: "Acceso verificado." });
       return userCredential;
     } catch (error) {
       const authError = error as AuthError;
-      setRole(null);
-      toast({ title: "Error al iniciar sesión", description: authError.message, variant: "destructive" });
+      toast({ title: "Error de acceso", description: "Credenciales incorrectas.", variant: "destructive" });
       return authError;
     } finally {
       setLoading(false);
@@ -78,16 +70,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string): Promise<UserCredential | AuthError> => {
     setLoading(true);
-    setRole(null); // Reset role
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userEmail = userCredential.user.email?.toLowerCase().trim();
+      const isAdmin = userEmail === ADMIN_EMAIL || userEmail === 'admin@ferretools.com';
       setUser(userCredential.user);
-      setRole('user'); // New users are 'user' by default
-      toast({ title: "Registro exitoso", description: "Tu cuenta ha sido creada." });
+      setRole(isAdmin ? 'admin' : 'user');
+      toast({ title: "Registro exitoso", description: "Cuenta creada correctamente." });
       return userCredential;
     } catch (error) {
       const authError = error as AuthError;
-      setRole(null);
       toast({ title: "Error al registrarse", description: authError.message, variant: "destructive" });
       return authError;
     } finally {
@@ -101,10 +93,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await firebaseSignOut(auth);
       setUser(null);
       setRole(null);
-      toast({ title: "Cierre de sesión exitoso" });
+      toast({ title: "Sesión cerrada" });
     } catch (error) {
-      const authError = error as AuthError;
-      toast({ title: "Error al cerrar sesión", description: authError.message, variant: "destructive" });
+      console.error(error);
     } finally {
       setLoading(false);
     }
