@@ -155,114 +155,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Collections */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white">Colecciones Destacadas</h2>
-          <Button variant="link" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary">
-            Explorar Más <ChevronRight className="ml-1 h-3 w-3" />
-          </Button>
-        </div>
-        <ScrollArea className="w-full whitespace-nowrap pb-4">
-          <div className="flex space-x-4 md:space-x-6">
-            {placeholderData.featuredCollections.map((col) => (
-              <div key={col.id} className="inline-block group cursor-pointer w-32 md:w-40">
-                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105">
-                  <Image
-                    src={col.image}
-                    alt={col.name}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    data-ai-hint={col.hint}
-                  />
-                </div>
-                <div className="text-center px-1">
-                  <h3 className="text-[11px] md:text-[12px] font-black uppercase tracking-tighter text-white leading-tight mb-1 line-clamp-2">
-                    {col.name}
-                  </h3>
-                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{col.count} artículos</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" className="bg-white/5" />
-        </ScrollArea>
-      </section>
-
-      {/* Shop By Trade */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white">Compra Por Oficio</h2>
-          <Button variant="link" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary">
-            Ver Más <ChevronRight className="ml-1 h-3 w-3" />
-          </Button>
-        </div>
-        <ScrollArea className="w-full whitespace-nowrap pb-4">
-          <div className="flex space-x-4 md:space-x-6">
-            {placeholderData.shopByTrade.map((trade) => (
-              <div key={trade.id} className="inline-block group cursor-pointer w-32 md:w-40">
-                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105">
-                  <Image
-                    src={trade.image}
-                    alt={trade.name}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    data-ai-hint={trade.hint}
-                  />
-                </div>
-                <div className="text-center px-1">
-                  <h3 className="text-[11px] md:text-[12px] font-black uppercase tracking-tighter text-white leading-tight mb-1 line-clamp-2">
-                    {trade.name}
-                  </h3>
-                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{trade.count} artículos</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" className="bg-white/5" />
-        </ScrollArea>
-      </section>
-
-      {/* Admin Quick Stats */}
-      {role === 'admin' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="glass-card border-white/5 bg-white/[0.02]">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-2xl">
-                <BarChart3 className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Valor Inventario</p>
-                <p className="text-2xl font-black text-white">{stats.totalValue.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card border-white/5 bg-white/[0.02]">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-accent/10 p-3 rounded-2xl">
-                <TrendingUp className="h-6 w-6 text-accent" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Productos en Stock</p>
-                <p className="text-2xl font-black text-white">{products.filter(p => p.quantity > 0).length}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card border-white/5 bg-white/[0.02] border-destructive/20">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-destructive/10 p-3 rounded-2xl">
-                <AlertCircle className="h-6 w-6 text-destructive" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atención Crítica</p>
-                <p className="text-2xl font-black text-white">{stats.lowStock + stats.outOfStock} SKU</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Control Panel */}
+      {/* Control Panel - MOVIDO HACIA ARRIBA PARA MEJOR UX */}
       <div className="sticky top-4 z-30 flex flex-col gap-6 p-6 glass-card rounded-2xl shadow-2xl border-white/10">
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="relative w-full">
@@ -366,6 +259,113 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* Admin Quick Stats - MOVIDO HACIA ARRIBA TAMBIÉN */}
+      {role === 'admin' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass-card border-white/5 bg-white/[0.02]">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="bg-primary/10 p-3 rounded-2xl">
+                <BarChart3 className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Valor Inventario</p>
+                <p className="text-2xl font-black text-white">{stats.totalValue.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 })}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card border-white/5 bg-white/[0.02]">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="bg-accent/10 p-3 rounded-2xl">
+                <TrendingUp className="h-6 w-6 text-accent" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Productos en Stock</p>
+                <p className="text-2xl font-black text-white">{products.filter(p => p.quantity > 0).length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card border-white/5 bg-white/[0.02] border-destructive/20">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="bg-destructive/10 p-3 rounded-2xl">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atención Crítica</p>
+                <p className="text-2xl font-black text-white">{stats.lowStock + stats.outOfStock} SKU</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Featured Collections */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white">Colecciones Destacadas</h2>
+          <Button variant="link" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary">
+            Explorar Más <ChevronRight className="ml-1 h-3 w-3" />
+          </Button>
+        </div>
+        <ScrollArea className="w-full whitespace-nowrap pb-4">
+          <div className="flex space-x-4 md:space-x-6">
+            {placeholderData.featuredCollections.map((col) => (
+              <div key={col.id} className="inline-block group cursor-pointer w-32 md:w-40">
+                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105">
+                  <Image
+                    src={col.image}
+                    alt={col.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    data-ai-hint={col.hint}
+                  />
+                </div>
+                <div className="text-center px-1">
+                  <h3 className="text-[11px] md:text-[12px] font-black uppercase tracking-tighter text-white leading-tight mb-1 line-clamp-2">
+                    {col.name}
+                  </h3>
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{col.count} artículos</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" className="bg-white/5" />
+        </ScrollArea>
+      </section>
+
+      {/* Shop By Trade */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white">Compra Por Oficio</h2>
+          <Button variant="link" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary">
+            Ver Más <ChevronRight className="ml-1 h-3 w-3" />
+          </Button>
+        </div>
+        <ScrollArea className="w-full whitespace-nowrap pb-4">
+          <div className="flex space-x-4 md:space-x-6">
+            {placeholderData.shopByTrade.map((trade) => (
+              <div key={trade.id} className="inline-block group cursor-pointer w-32 md:w-40">
+                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105">
+                  <Image
+                    src={trade.image}
+                    alt={trade.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    data-ai-hint={trade.hint}
+                  />
+                </div>
+                <div className="text-center px-1">
+                  <h3 className="text-[11px] md:text-[12px] font-black uppercase tracking-tighter text-white leading-tight mb-1 line-clamp-2">
+                    {trade.name}
+                  </h3>
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{trade.count} artículos</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" className="bg-white/5" />
+        </ScrollArea>
+      </section>
 
       {/* Grid Section */}
       {loadingProducts && products.length === 0 ? (
