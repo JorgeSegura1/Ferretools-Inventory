@@ -2,7 +2,7 @@
 "use client";
 
 import type { User as FirebaseUser, AuthError } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -10,11 +10,11 @@ import {
   signOut as firebaseSignOut,
   type UserCredential
 } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-// Acceso robusto al email del admin desde variables de entorno
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase().trim();
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase().trim() || 'admin@ferretools.com';
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -34,17 +34,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser && currentUser.email) {
-        const userEmail = currentUser.email.toLowerCase().trim();
-        // Verificación de rol mejorada
-        const isAdmin = userEmail === ADMIN_EMAIL || userEmail === 'admin@ferretools.com';
-        setRole(isAdmin ? 'admin' : 'user');
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        
+        // Listener en tiempo real para el rol del usuario
+        const unsubDoc = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setRole(docSnap.data().role);
+          } else {
+            // Si no existe el doc (primer login o error), asignar rol por defecto
+            const defaultRole = currentUser.email?.toLowerCase().trim() === ADMIN_EMAIL ? 'admin' : 'user';
+            setRole(defaultRole);
+            // Crear el doc si no existe
+            setDoc(userDocRef, {
+              email: currentUser.email,
+              role: defaultRole,
+              createdAt: serverTimestamp()
+            }, { merge: true });
+          }
+        });
+
+        setLoading(false);
+        return () => unsubDoc();
       } else {
         setRole(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -53,11 +70,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const userEmail = userCredential.user.email?.toLowerCase().trim();
-      const isAdmin = userEmail === ADMIN_EMAIL || userEmail === 'admin@ferretools.com';
-      setUser(userCredential.user);
-      setRole(isAdmin ? 'admin' : 'user');
-      toast({ title: "Inicio de sesión exitoso", description: "Acceso verificado." });
       return userCredential;
     } catch (error) {
       const authError = error as AuthError;
@@ -72,10 +84,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const userEmail = userCredential.user.email?.toLowerCase().trim();
-      const isAdmin = userEmail === ADMIN_EMAIL || userEmail === 'admin@ferretools.com';
-      setUser(userCredential.user);
-      setRole(isAdmin ? 'admin' : 'user');
+      const userEmail = email.toLowerCase().trim();
+      const isAdmin = userEmail === ADMIN_EMAIL;
+      
+      // Crear perfil en Firestore inmediatamente
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email: userEmail,
+        role: isAdmin ? 'admin' : 'user',
+        createdAt: serverTimestamp()
+      });
+
       toast({ title: "Registro exitoso", description: "Cuenta creada correctamente." });
       return userCredential;
     } catch (error) {
@@ -88,7 +106,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    setLoading(true);
     try {
       await firebaseSignOut(auth);
       setUser(null);
@@ -96,8 +113,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: "Sesión cerrada" });
     } catch (error) {
       console.error(error);
-    } finally {
-      setLoading(false);
     }
   };
 

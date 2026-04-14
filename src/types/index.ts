@@ -1,6 +1,6 @@
 
 export type Product = {
-  id: string; // Firestore document ID
+  id: string; 
   name: string;
   description: string;
   price: number;
@@ -8,9 +8,16 @@ export type Product = {
   imageUrl: string;
   category?: string; 
   arrivalDate?: Date;
-  energyRating?: 'A+++' | 'A++' | 'A' | 'B' | 'C'; // Nuevo: Clasificación energética
-  isIotEnabled?: boolean; // Nuevo: Si tiene sensores de monitoreo
-  iotSensorStatus?: 'online' | 'offline' | 'warning'; // Nuevo: Estado del sensor físico
+  energyRating?: 'A+++' | 'A++' | 'A' | 'B' | 'C'; 
+  isIotEnabled?: boolean; 
+  iotSensorStatus?: 'online' | 'offline' | 'warning'; 
+};
+
+export type UserProfile = {
+  uid: string;
+  email: string;
+  role: 'admin' | 'user';
+  createdAt?: Date;
 };
 
 export type SaleItem = {
@@ -39,6 +46,6 @@ export interface SaleRecord {
   totalItems: number; 
   itemsSold: SoldItemDetails[];
   userId?: string; 
-  shippingStatus?: 'in_transit' | 'delivered' | 'processing'; // Nuevo: Seguimiento logístico
-  iotTrackingUrl?: string; // Nuevo: Enlace simulado a telemetría
+  shippingStatus?: 'in_transit' | 'delivered' | 'processing'; 
+  iotTrackingUrl?: string; 
 }

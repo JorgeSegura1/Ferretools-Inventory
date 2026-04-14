@@ -29,6 +29,16 @@
         "shippingStatus": { "type": "string", "enum": ["in_transit", "delivered", "processing"] },
         "itemsSold": { "type": "array" }
       }
+    },
+    "UserProfile": {
+      "title": "Perfil de Usuario",
+      "description": "Datos de perfil y rol del usuario.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -36,6 +46,7 @@
   },
   "firestore": {
     "products/{productId}": { "schema": { "$ref": "#/entities/Product" }, "description": "Stock inteligente." },
-    "sales/{saleId}": { "schema": { "$ref": "#/entities/SaleRecord" }, "description": "Historial logístico." }
+    "sales/{saleId}": { "schema": { "$ref": "#/entities/SaleRecord" }, "description": "Historial logístico." },
+    "users/{userId}": { "schema": { "$ref": "#/entities/UserProfile" }, "description": "Perfiles y roles de usuario." }
   }
 }
