@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Filter, ListTree, ShoppingCart, Loader2, Search, BarChart3, Radio, Globe, ChevronRight, Zap, AlertCircle, ShoppingBag } from 'lucide-react';
+import { Filter, ListTree, ShoppingCart, Loader2, Search, BarChart3, Radio, Globe, ChevronRight, Zap, AlertCircle } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +51,7 @@ export default function HomePage() {
   const [isProcessingSale, setIsProcessingSale] = useState(false);
 
   const featuredRef = useRef<HTMLDivElement>(null);
+  const tradeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (products.length > 0) {
@@ -113,7 +114,6 @@ export default function HomePage() {
         maxQuantity: product.quantity,
       }];
     });
-    // Abrir automáticamente el carrito al agregar un item
     setIsSaleSheetOpen(true);
   };
 
@@ -326,6 +326,41 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Shop By Trade */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white">Compra Por Oficio</h2>
+        </div>
+        <div 
+          ref={tradeRef}
+          onMouseDown={(e) => handleDragScroll(e, tradeRef)}
+          className="w-full overflow-x-auto whitespace-nowrap pb-4 scrollbar-hide cursor-grab active:cursor-grabbing select-none"
+        >
+          <div className="flex space-x-4 md:space-x-6">
+            {placeholderData.shopByTrade.map((trade) => (
+              <div key={trade.id} className="inline-block group cursor-pointer w-32 md:w-40 shrink-0">
+                <div className="aspect-square relative rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/5 glass-card mb-3 transition-all duration-300 group-hover:border-primary/50 group-hover:scale-105 pointer-events-none">
+                  <Image
+                    src={trade.image}
+                    alt={trade.name}
+                    fill
+                    draggable={false}
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    data-ai-hint={trade.hint}
+                  />
+                </div>
+                <div className="text-center px-1">
+                  <h3 className="text-[11px] md:text-[12px] font-black uppercase tracking-tighter text-white leading-tight mb-1 line-clamp-2">
+                    {trade.name}
+                  </h3>
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{trade.count} artículos</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Product List */}
       {loadingProducts && products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-32 gap-4">
@@ -379,4 +414,3 @@ export default function HomePage() {
     </div>
   );
 }
-
